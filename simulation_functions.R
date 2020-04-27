@@ -1,16 +1,19 @@
+library(Matrix)
 
 #' generate random normal outcome from covariance matrix
 #'
 #' @param covMat a covariance matrix
 #' @param varComp 2-element vector with (genetic, error) variance components
 #' @return numeric vector of outcomes
+#' 
+#' @import Matrix
 outcome_from_covMat <- function(covMat, varComp) {
     
     ## could add heterogeneous residual variance here
-    covMat <- covMat*varComp[1] + diag(nrow(covMat))*varComp[2]
+    covMat <- covMat*varComp[1] + Diagonal(nrow(covMat))*varComp[2]
 
     ## singular value decomposition
-    svd.covMat <- svd(covMat) 
+    svd.covMat <- svd(covMat)
     sqrt.covMat <- svd.covMat$v %*% diag(sqrt(svd.covMat$d)) %*% t(svd.covMat$v)
 
     ## svd.covMat$v - eigenvectors
