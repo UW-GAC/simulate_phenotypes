@@ -1,4 +1,5 @@
 library(Matrix)
+library(data.table)
 
 #' generate random normal outcome from covariance matrix
 #'
@@ -41,12 +42,58 @@ outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
 
 #' Return list of blocks in a block-diagonal matrix
 #' 
+#' only works if all block elements are nonzero
 #' https://stackoverflow.com/questions/54472962/find-the-indices-for-the-sub-matrices-in-block-matrix
 #' 
 #' @param x Block diagonal matrix
 #' @return list of indices of matrix blocks
+block_indices_nonzero <- function(x) {
+    # from stackoverflow
+    #ind <- split(seq_len(nrow(x)), max.col(abs(x) > 0, "first"))
+    
+    #using sparse Matrix representation
+    row.counts <- table(x@i + 1)
+    r <- 1
+    b <- 1
+    ind <- list()
+    while (r < length(row.counts)) {
+        n <- r + row.counts[r] - 1
+        ind[[b]] <- r:n
+        r <- n + 1
+        b <- b + 1
+    }
+    return(ind)
+}
+
+#' Return list of blocks in a block-diagonal matrix
+#' 
+#' Code taken from GENESIS::makeSparseMatrix
+#' 
+#' @param x Block diagonal matrix
+#' @return list of indices of matrix blocks
+#' @import data.table
+#' @import igraph
 block_indices <- function(x) {
-    split(seq_len(nrow(x)), max.col(abs(x) > 0, "first"))
+    
+    # get the table of all related pairs
+    rel <- apply(x, MARGIN = 1, FUN = function(v){ which(v > 0) })
+    rel <- lapply(seq_along(rel), function(i) { data.table('ID1' = i, 'ID2' = rel[[i]]) })
+    rel <- do.call(rbind, rel)
+    setkeyv(rel, c('ID1', 'ID2'))
+    
+    # create graph of relatives
+    g <- igraph::graph_from_data_frame(rel[ID1 != ID2])
+    # extract cluster membership
+    clu <- igraph::components(g)
+    mem <- clu$membership
+    
+    blocks <- list()
+    for(i in 1:clu$no){
+        # samples in the cluster
+        blocks[[i]] <- unname(which(mem == i))
+    }
+    
+    return(blocks)
 }
 
 
@@ -58,7 +105,6 @@ outcome_from_covMat_blocks <- function(covMat, varComp, outcome=NULL) {
         stopifnot(length(outcome) == nrow(covMat))
     }
     
-    outcome <- rnorm(nrow(covMat))
     outcome.list <- lapply(block_indices(covMat), function(ind) {
         if (length(ind) == 1) return(outcome[ind])
         outcome_from_covMat(covMat[ind,ind], varComp, outcome=outcome[ind])

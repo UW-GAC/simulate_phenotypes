@@ -64,7 +64,7 @@ bdMatrix <- Matrix(x)
 
 ## test function to return blocks
 blocks <- block_indices(bdMatrix)
-all(x == do.call(bdiag, lapply(blocks, function(ind) bdMatrix[ind,ind])))
+all(bdMatrix == do.call(bdiag, lapply(blocks, function(ind) bdMatrix[ind,ind])))
 
 
 ## test with real sparse matrix
@@ -72,17 +72,21 @@ covMat <- GWASTools::getobj("/Users/stephanie/GCC_code/analysis_pipeline/testdat
 bdMatrix <- makeSparseMatrix(as.matrix(covMat), thresh=0.07)
 
 
+## 1KG matrix was originally sparse but not block diagonal
+## try with TOPMed matrix
+fr8 <- GWASTools::getobj("/sbgenomics/project-files/pcrelate_kinshipMatrix_sparseDeg4_v2.RData")
+covMat <- fr8[1:1000,1:1000]
+
 
 varComp <- c(40, 100)
-set.seed(100)
-outcome <- rnorm(nrow(Mat))
+set.seed(80)
+outcome <- rnorm(nrow(covMat))
 outcome.all <- outcome_from_covMat(covMat, varComp, outcome=outcome)
 outcome.blocks <- outcome_from_covMat_blocks(covMat, varComp, outcome=outcome)
+all.equal(outcome.all, outcome.blocks)
 
-
-dat <- data.frame(y=outcome.all, yb=outcome.blocks, row.names=rownames(covMat))
+dat <- data.frame(y=outcome.all, row.names=rownames(covMat))
 nullmod <- fitNullModel(dat, outcome="y", cov.mat=covMat)
-nullmod.blocks <- fitNullModel(dat, outcome="yb", cov.mat=covMat)
 
 nullmod$varComp
-nullmod.blocks$varComp
+varCompCI(nullmod, prop=FALSE)
