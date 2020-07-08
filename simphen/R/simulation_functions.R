@@ -1,13 +1,15 @@
-library(Matrix)
-library(data.table)
-
-#' generate random normal outcome from covariance matrix
+#' Generate random normal outcome from covariance matrix
+#'
+#' If \code{covMat} is a block diagonal matrix, use \code{outcome_from_covMat_blocks}.
 #'
 #' @param covMat a covariance matrix
 #' @param varComp 2-element vector with (genetic, error) variance components
+#' @param outcome vector to be adjusted for covariance. If \code{NULL}, will be created using \code{\link{rnorm}}.
 #' @return numeric vector of outcomes
 #' 
 #' @import Matrix
+#' @importFrom stats rnorm
+#' @export
 outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
     
     if (is.null(outcome)) {
@@ -39,6 +41,28 @@ outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
 }
 
 
+#' @rdname outcome_from_covMat
+#' @export
+outcome_from_covMat_blocks <- function(covMat, varComp, outcome=NULL) {
+    
+    if (is.null(outcome)) {
+        outcome <- rnorm(nrow(covMat))
+    } else {
+        stopifnot(length(outcome) == nrow(covMat))
+    }
+    
+    outcome.list <- lapply(block_indices(covMat), function(ind) {
+        if (length(ind) == 1) {
+            oc <- sqrt(covMat[ind,ind]*varComp[1] + varComp[2]) * outcome[ind]
+        } else {
+            oc <- outcome_from_covMat(covMat[ind,ind], varComp, outcome=outcome[ind])
+        }
+        oc
+    })
+    return(unlist(outcome.list))
+}
+
+
 
 #' Return list of blocks in a block-diagonal matrix
 #' 
@@ -47,6 +71,7 @@ outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
 #' 
 #' @param x Block diagonal matrix
 #' @return list of indices of matrix blocks
+#' @noRd
 block_indices_nonzero <- function(x) {
     # from stackoverflow
     #ind <- split(seq_len(nrow(x)), max.col(abs(x) > 0, "first"))
@@ -73,6 +98,7 @@ block_indices_nonzero <- function(x) {
 #' @return list of indices of matrix blocks
 #' @import data.table
 #' @import igraph
+#' @noRd
 block_indices <- function(x) {
     
     # get the table of all related pairs
@@ -82,7 +108,7 @@ block_indices <- function(x) {
     setkeyv(rel, c('ID1', 'ID2'))
     
     # create graph of relatives
-    g <- igraph::graph_from_data_frame(rel[ID1 != ID2])
+    g <- igraph::graph_from_data_frame(rel)
     # extract cluster membership
     clu <- igraph::components(g)
     mem <- clu$membership
@@ -90,24 +116,8 @@ block_indices <- function(x) {
     blocks <- list()
     for(i in 1:clu$no){
         # samples in the cluster
-        blocks[[i]] <- unname(which(mem == i))
+        blocks[[i]] <- as.integer(names(mem[mem == i]))
     }
     
     return(blocks)
-}
-
-
-outcome_from_covMat_blocks <- function(covMat, varComp, outcome=NULL) {
-    
-    if (is.null(outcome)) {
-        outcome <- rnorm(nrow(covMat))
-    } else {
-        stopifnot(length(outcome) == nrow(covMat))
-    }
-    
-    outcome.list <- lapply(block_indices(covMat), function(ind) {
-        if (length(ind) == 1) return(outcome[ind])
-        outcome_from_covMat(covMat[ind,ind], varComp, outcome=outcome[ind])
-    })
-    return(unlist(outcome.list))
 }
