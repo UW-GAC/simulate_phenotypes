@@ -5,9 +5,11 @@ Title: Utilities for simulating phenotypes based on a covariance matrix
 Description: Utilities for simulating phenotypes based on a covariance matrix.
 Author: Stephanie Gogarten
 Maintainer: Stephanie Gogarten <sdmorris@uw.edu>
+License: MIT + file LICENSE
 Depends:
 Imports: stats, Matrix, data.table, igraph
-Suggests: roxygen2, testthat, SeqArray
-License: MIT + file LICENSE
+Suggests: roxygen2, testthat, knitr, rmarkdown, 
+    SeqArray, SeqVarTools, Biobase, GENESIS
+VignetteBuilder: knitr
 LazyLoad: no
 RoxygenNote: 7.1.0

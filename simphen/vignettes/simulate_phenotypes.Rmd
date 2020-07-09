@@ -1,0 +1,94 @@
+---
+title: "Simulating phenotypes"
+author: "Stephanie M. Gogarten"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulating phenotypes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+For this example we will use 1000 genomes data. We start with a covariance matrix calcuated using the GENESIS package. We found pairwise kinship with `pcrelate` and created a block diagonal matrix of kinship using `pcrelateToMatrix`. We generate a random normal outcome adjusted for covariance.
+
+```{r}
+library(simphen)
+data("1KG_pcrelate_blockDiag_Matrix")
+varComp <- c(40, 100)
+set.seed(8)
+outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
+```
+
+Next we define strata using 1000 genomes super populations, and calculate variant frequency in each stratum.
+
+```{r}
+library(SeqArray)
+gdsfile <- system.file("extdata", "1KG_phase3_chr1_SNVsubset.gds", package="simphen")
+gds <- seqOpen(gdsfile)
+sample.id <- seqGetData(gds, "sample.id")
+pops <- seqGetData(gds, "sample.annotation/Population")
+super.pops <- list("EAS"=c("CHB", "JPT", "CHS", "CDX", "KHV"),
+                   "EUR"=c("CEU", "TSI", "FIN", "GBR", "IBS"),
+                   "AFR"=c("YRI", "LWK", "GWD", "MSL", "ESN", "ASW", "ACB"),
+                   "AMR"=c("MXL", "PUR", "CLM", "PEL"),
+                   "SAS"=c("GIH", "PJL", "BEB", "STU", "ITU"))
+strata <- lapply(super.pops, function(x) sample.id[pops %in% x])
+
+# alternate allele frequency
+freq <- do.call(cbind, lapply(strata, function(x) {
+    seqSetFilter(gds, sample.id=x, verbose=FALSE)
+    seqAlleleFreq(gds, ref.allele=1)
+}))
+seqResetFilter(gds, verbose=FALSE)
+```
+
+Select variants based on frequency in different strata
+
+```{r}
+# select variants in AFR but not EUR
+var_afr <- var_single_stratum(freq[,"AFR"], freq[,"EUR"])
+
+# select variants in both
+var_both <- var_multiple_strata(freq[,"AFR"], freq[,"EUR"])
+
+```
+
+Add an effect for a variant in only one stratum
+
+```{r}
+seqSetFilter(gds, variant.sel=var_afr[1], verbose=FALSE)
+geno <- as.vector(seqGetData(gds, "$dosage_alt"))
+outcome.eff <- add_variant_effect(outcome, geno, h2=0.01)
+```
+
+Test association
+
+```{r}
+library(Biobase)
+library(SeqVarTools)
+library(GENESIS)
+dat <- AnnotatedDataFrame(data.frame(sample.id, outcome, stringsAsFactors=FALSE))
+nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
+                        verbose=FALSE)
+seqData <- SeqVarData(gds, sampleData=dat)
+iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
+assoc <- assocTestSingle(iterator, nullmod, verbose=FALSE)
+assoc
+```
+
+```{r}
+# test with only AFR samples
+resetIterator(iterator, verbose=FALSE)
+nullmod_afr <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
+                            sample.id=strata[["AFR"]], verbose=FALSE)
+assoc_afr <- assocTestSingle(iterator, nullmod_afr, verbose=FALSE)
+assoc_afr
+```
+
+```{r}
+seqClose(gds)
+```
