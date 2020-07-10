@@ -71,7 +71,7 @@ Test association
 library(Biobase)
 library(SeqVarTools)
 library(GENESIS)
-dat <- AnnotatedDataFrame(data.frame(sample.id, outcome, stringsAsFactors=FALSE))
+dat <- AnnotatedDataFrame(data.frame(sample.id, outcome=outcome.eff, stringsAsFactors=FALSE))
 nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
                         verbose=FALSE)
 seqData <- SeqVarData(gds, sampleData=dat)
@@ -87,6 +87,50 @@ nullmod_afr <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
                             sample.id=strata[["AFR"]], verbose=FALSE)
 assoc_afr <- assocTestSingle(iterator, nullmod_afr, verbose=FALSE)
 assoc_afr
+```
+
+Add an effect common in both strata
+
+```{r}
+seqSetFilter(gds, variant.sel=var_both[1], verbose=FALSE)
+geno <- as.vector(seqGetData(gds, "$dosage_alt"))
+outcome.eff <- add_variant_effect(outcome, geno, h2=0.01)
+```
+
+Add an effect different across strata
+
+```{r}
+afr <- sample.id %in% strata[["AFR"]]
+outcome.eff.afr <- add_variant_effect(outcome[afr], geno[afr], h2=0.01)
+eur <- sample.id %in% strata[["EUR"]]
+outcome.eff.eur <- add_variant_effect(outcome[eur], geno[eur], h2=0.05)
+```
+
+```{r}
+dat <- AnnotatedDataFrame(data.frame(sample.id, outcome=NA, stringsAsFactors=FALSE))
+dat$outcome[afr] <- outcome.eff.afr
+dat$outcome[eur] <- outcome.eff.eur
+nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
+                        verbose=FALSE)
+iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
+assoc <- assocTestSingle(iterator, nullmod, verbose=FALSE)
+assoc
+```
+
+```{r}
+resetIterator(iterator, verbose=FALSE)
+nullmod_afr <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
+                            sample.id=strata[["AFR"]], verbose=FALSE)
+assoc_afr <- assocTestSingle(iterator, nullmod_afr, verbose=FALSE)
+assoc_afr
+```
+
+```{r}
+resetIterator(iterator, verbose=FALSE)
+nullmod_eur <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
+                            sample.id=strata[["EUR"]], verbose=FALSE)
+assoc_eur <- assocTestSingle(iterator, nullmod_eur, verbose=FALSE)
+assoc_eur
 ```
 
 ```{r}
