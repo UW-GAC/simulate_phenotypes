@@ -62,7 +62,7 @@ Add an effect for a variant in only one stratum
 ```{r}
 seqSetFilter(gds, variant.sel=var_afr[1], verbose=FALSE)
 geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-outcome.eff <- add_variant_effect(outcome, geno, h2=0.01)
+outcome.eff <- outcome + variant_effect(geno, h2=0.01, varComp=varComp)
 ```
 
 Test association
@@ -94,16 +94,16 @@ Add an effect common in both strata
 ```{r}
 seqSetFilter(gds, variant.sel=var_both[1], verbose=FALSE)
 geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-outcome.eff <- add_variant_effect(outcome, geno, h2=0.01)
+outcome.eff <- outcome + variant_effect(geno, h2=0.01, varComp=varComp)
 ```
 
 Add an effect different across strata
 
 ```{r}
 afr <- sample.id %in% strata[["AFR"]]
-outcome.eff.afr <- add_variant_effect(outcome[afr], geno[afr], h2=0.01)
+outcome.eff.afr <- outcome[afr] + variant_effect(geno[afr], h2=0.01, varComp=varComp)
 eur <- sample.id %in% strata[["EUR"]]
-outcome.eff.eur <- add_variant_effect(outcome[eur], geno[eur], h2=0.05)
+outcome.eff.eur <- outcome[eur] + variant_effect(geno[eur], h2=0.05, varComp=varComp)
 ```
 
 ```{r}

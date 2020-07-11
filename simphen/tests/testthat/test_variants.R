@@ -8,9 +8,8 @@ test_that("variant effect", {
     seqSetFilter(gds, variant.sel=1, verbose=FALSE)
     G <- as.vector(seqGetData(gds, "$dosage_alt"))
 
-    outcome <- rnorm(length(G))
-    outc_eff <- add_variant_effect(outcome, G, h2=0.001)
-    expect_true(all(outc_eff - outcome >= 0))
+    eff <- variant_effect(G, h2=0.001, varComp=c(3,7))
+    expect_equal(G > 0, eff > 0)
     
     seqClose(gds)
 })
