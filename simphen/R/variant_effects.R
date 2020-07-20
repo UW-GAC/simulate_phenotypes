@@ -7,7 +7,7 @@
 #' @importFrom stats var
 #' @export
 variant_effect <- function(G, h2, varComp) {
-    htot2 <- varComp[1]/sum(varComp)
+    htot2 <- (varComp[1] + h2*varComp[2])/sum(varComp)
     alpha <- sqrt((h2*varComp[2])/((1-htot2)*var(G)))
     alpha[alpha == Inf] <- 0
     snpeff <- G * alpha
