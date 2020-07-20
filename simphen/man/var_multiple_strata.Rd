@@ -7,7 +7,7 @@
 \usage{
 var_multiple_strata(a, b, min.freq = 0.1)
 
-var_single_stratum(a, b, min.freq = 0.1)
+var_single_stratum(a, b, min.freq = 0.1, max.freq = 0.001)
 }
 \arguments{
 \item{a}{vector of variant frequency in group a}
@@ -15,6 +15,8 @@ var_single_stratum(a, b, min.freq = 0.1)
 \item{b}{vector of variant frequency in group b}
 
 \item{min.freq}{miniumum frequency to be included in results}
+
+\item{max.freq}{max frequency to be considered "not present" in group b}
 }
 \value{
 index of variant meeting criteria
@@ -26,5 +28,5 @@ in groups a and b with frequency \code{>min.freq}
 \details{
 \code{var_single_stratum} selects variants
 with frequency \code{>min.freq} in group a and
-frequency 0 in group b
+frequency \code{<max.freq} in group b
 }
