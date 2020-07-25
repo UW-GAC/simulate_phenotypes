@@ -102,7 +102,8 @@ block_indices_nonzero <- function(x) {
 block_indices <- function(x) {
     
     # get the table of all related pairs
-    rel <- apply(x, MARGIN = 1, FUN = function(v){ which(v > 0) })
+    rel <- GENESIS:::.apply(x, MARGIN = 1, FUN = function(v){ which(v > 0) },
+                            selection=list(1:nrow(x), 1:ncol(x)))
     rel <- lapply(seq_along(rel), function(i) { data.table('ID1' = i, 'ID2' = rel[[i]]) })
     rel <- do.call(rbind, rel)
     setkeyv(rel, c('ID1', 'ID2'))
