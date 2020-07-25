@@ -41,6 +41,29 @@ outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
 }
 
 
+#' this function allows computing the block indices only once for multiple outcomes
+#' @param blocks list returned by block_indices
+#' @noRd
+outcome_from_covMat_block_indices <- function(covMat, blocks, varComp, outcome=NULL) {
+    
+    if (is.null(outcome)) {
+        outcome <- rnorm(nrow(covMat))
+    } else {
+        stopifnot(length(outcome) == nrow(covMat))
+    }
+    
+    outcome.list <- lapply(blocks, function(ind) {
+        if (length(ind) == 1) {
+            oc <- sqrt(covMat[ind,ind]*varComp[1] + varComp[2]) * outcome[ind]
+        } else {
+            oc <- outcome_from_covMat(covMat[ind,ind], varComp, outcome=outcome[ind])
+        }
+        oc
+    })
+    return(unlist(outcome.list))
+}
+
+
 #' @rdname outcome_from_covMat
 #' @export
 outcome_from_covMat_blocks <- function(covMat, varComp, outcome=NULL) {
@@ -51,15 +74,8 @@ outcome_from_covMat_blocks <- function(covMat, varComp, outcome=NULL) {
         stopifnot(length(outcome) == nrow(covMat))
     }
     
-    outcome.list <- lapply(block_indices(covMat), function(ind) {
-        if (length(ind) == 1) {
-            oc <- sqrt(covMat[ind,ind]*varComp[1] + varComp[2]) * outcome[ind]
-        } else {
-            oc <- outcome_from_covMat(covMat[ind,ind], varComp, outcome=outcome[ind])
-        }
-        oc
-    })
-    return(unlist(outcome.list))
+    blocks <- block_indices(covMat)
+    outcome_from_covMat_block_indices(covMat, blocks, varComp, outcome)
 }
 
 
