@@ -1,0 +1,50 @@
+---
+title: "generate outcomes with covariance"
+output: html_notebook
+---
+
+```{r}
+#remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
+remotes::install_local("/sbgenomics/workspace/simulate_phenotypes/simphen", upgrade=FALSE)
+library(simphen)
+```
+
+Generate outcome from covariance matrix
+
+```{r}
+covmat <- GWASTools::getobj("/sbgenomics/project-files/pcrelate_kinshipMatrix_sparseDeg4_v2.RData")
+# subset to only samples we are using
+samples.afr <- readRDS("/sbgenomics/project-files/strata/freeze8_samples_AfrAm_2020-07-23.rds")
+samples.eur <- readRDS("/sbgenomics/project-files/strata/freeze8_samples_EurAm_2020-07-23.rds")
+ind <- which(rownames(covmat) %in% c(samples.afr, samples.eur))
+covmat <- covmat[ind,ind]
+```
+
+First we need to find the block indices for the matrix - just do this once for large matrices (needs between 8 and 30 GB of memory to calculate indices)
+
+```{r}
+blocks <- simphen:::block_indices(covmat)
+```
+
+Save matrix and blocks together
+
+```{r}
+save(covmat, blocks, file="/sbgenomics/output-files/covmat_blocks_AfrEur_2020-07-24.RData")
+```
+
+```{r}
+load("/sbgenomics/output-files/covmat_blocks_AfrEur_2020-07-24.RData")
+```
+
+```{r}
+length(blocks)
+table(sapply(blocks, length))
+```
+
+See how long it takes to compute outcome
+
+```{r}
+varComp <- c(3,7)
+system.time(outcome <- simphen:::outcome_from_covMat_block_indices(covmat, blocks, varComp))
+```
+
