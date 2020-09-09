@@ -18,7 +18,7 @@ For this example we will use 1000 genomes data. We start with a covariance matri
 ```{r}
 library(simphen)
 data("1KG_pcrelate_blockDiag_Matrix")
-varComp <- c(40, 100)
+varComp <- c(4, 10)
 set.seed(8)
 outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
 ```
@@ -62,7 +62,9 @@ Add an effect for a variant in only one stratum
 ```{r}
 seqSetFilter(gds, variant.sel=var_afr[1], verbose=FALSE)
 geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-outcome.eff <- outcome + variant_effect(geno, h2=0.01, varComp=varComp)
+eff <- variant_effect(geno, h2=0.01, varComp=varComp)
+eff$beta
+outcome.eff <- outcome + eff$Gbeta
 ```
 
 Test association
@@ -89,21 +91,28 @@ assoc_afr <- assocTestSingle(iterator, nullmod_afr, verbose=FALSE)
 assoc_afr
 ```
 
-Add an effect common in both strata
+Add an effect common in both strata - specify effect size
 
 ```{r}
 seqSetFilter(gds, variant.sel=var_both[1], verbose=FALSE)
 geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-outcome.eff <- outcome + variant_effect(geno, h2=0.01, varComp=varComp)
+eff <- variant_effect(geno, beta=1.5, varComp=varComp)
+eff$h2
+outcome.eff <- outcome + eff$Gbeta
 ```
 
 Add an effect different across strata
 
 ```{r}
 afr <- sample.id %in% strata[["AFR"]]
-outcome.eff.afr <- outcome[afr] + variant_effect(geno[afr], h2=0.01, varComp=varComp)
+eff.afr <- variant_effect(geno[afr], beta=1.2, varComp=varComp)
+power(N=sum(afr), h2=eff.afr$h2, beta=eff.afr$beta) 
+outcome.eff.afr <- outcome[afr] + eff.afr$Gbeta
+
 eur <- sample.id %in% strata[["EUR"]]
-outcome.eff.eur <- outcome[eur] + variant_effect(geno[eur], h2=0.05, varComp=varComp)
+eff.eur <- variant_effect(geno[eur], beta=1.5, varComp=varComp)
+power(N=sum(eur), h2=eff.eur$h2, beta=eff.eur$beta) 
+outcome.eff.eur <- outcome[eur] + eff.eur$Gbeta
 ```
 
 ```{r}

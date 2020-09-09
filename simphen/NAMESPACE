@@ -2,6 +2,7 @@
 
 export(outcome_from_covMat)
 export(outcome_from_covMat_blocks)
+export(power)
 export(var_multiple_strata)
 export(var_single_stratum)
 export(variant_effect)
