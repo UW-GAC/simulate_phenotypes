@@ -1,5 +1,8 @@
 context("variant tests")
 library(SeqArray)
+library(SeqVarTools)
+library(Biobase)
+library(GENESIS)
 
 test_that("variant effect", {
     gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
