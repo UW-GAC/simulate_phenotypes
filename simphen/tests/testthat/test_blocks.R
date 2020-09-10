@@ -41,5 +41,5 @@ test_that("outcome from blocks matches loop", {
     })
     outcome.loop <- unlist(outcome.list)
     outcome.blocks <- outcome_from_covMat_block_indices(covMat, blocks, varComp, outcome=outcome)
-    expect_equal(outcome.blocks, outcome.loop)
+    expect_equivalent(outcome.blocks, outcome.loop)
 })

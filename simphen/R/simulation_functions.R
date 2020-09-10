@@ -37,7 +37,7 @@ outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
     ## random normal outcome with covariance of the matrix
     outcome <- as.vector(sqrt.covMat %*% outcome)
 
-    return(outcome)
+    return(setNames(outcome, rownames(covMat)))
 }
 
 
@@ -66,7 +66,7 @@ outcome_from_covMat_block_indices <- function(covMat, blocks, varComp, outcome=N
     outcome.list <- list()
     outcome.list[families] <- outcome.families
     outcome.list[singletons] <- outcome.singletons
-    return(unlist(outcome.list))
+    return(setNames(unlist(outcome.list), rownames(covMat)))
 }
 
 
