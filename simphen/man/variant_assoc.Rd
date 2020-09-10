@@ -4,22 +4,33 @@
 \alias{variant_assoc}
 \title{Run association test for an outcome and a variant}
 \usage{
-variant_assoc(variant.sel, gdsobj, outcome, covars, cov.mat, beta, varComp)
+variant_assoc(
+  variant.sel,
+  beta,
+  varComp,
+  gdsobj,
+  dat,
+  outcome,
+  cov.mat,
+  covars = NULL
+)
 }
 \arguments{
 \item{variant.sel}{index of variant in unfilted gdsobj}
 
-\item{gdsobj}{SeqVarGDSClass object}
-
-\item{outcome}{vector of outcome}
-
-\item{covars}{data.frame of covariates}
-
-\item{cov.mat}{covariance matrix}
-
 \item{beta}{effect size for variant}
 
 \item{varComp}{2-element vector with (genetic, error) variance components}
+
+\item{gdsobj}{SeqVarGDSClass object}
+
+\item{dat}{AnnotatedDataFrame with sample.id, outcome, and covariates}
+
+\item{outcome}{character string specifying the name of the outcome variable in \code{dat}}
+
+\item{cov.mat}{covariance matrix}
+
+\item{covars}{A vector of character strings specifying the names of the fixed effect covariates in \code{dat}}
 }
 \value{
 association test results for outcome and variant
