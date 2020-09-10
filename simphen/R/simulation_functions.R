@@ -8,7 +8,7 @@
 #' @return numeric vector of outcomes
 #' 
 #' @import Matrix
-#' @importFrom stats rnorm
+#' @importFrom stats rnorm setNames
 #' @export
 outcome_from_covMat <- function(covMat, varComp, outcome=NULL) {
     
