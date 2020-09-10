@@ -40,6 +40,7 @@ variant_effect <- function(G, h2, beta, varComp) {
 #' @param pval p-value threshold for significance
 #' @return power
 #' @references https://github.com/kaustubhad/gwas-power/blob/master/power_calc_functions.R
+#' @importFrom stats qchisq pchisq
 #' @export
 power <- function(N, h2, beta, pval=5e-8) {
     # Significance threshold for chi-square, corresponding to P-value threshold
@@ -52,4 +53,54 @@ power <- function(N, h2, beta, pval=5e-8) {
     pow <- pchisq(th, df=1, lower.tail=FALSE, ncp=ncp)
 
     return(pow)
+}
+
+
+#' Run association test for an outcome and a variant
+#'
+#' Run association test for an outcome and a variant
+#'
+#' Order of samples in \code{outcome} and \code{covars} must match \code{cov.mat}. The rownames of \code{cov.mat} must correspond to the \code{sample.id} node in \code{gdsobj}.
+#'
+#' @param variant.sel index of variant in unfilted gdsobj
+#' @param beta effect size for variant
+#' @param varComp 2-element vector with (genetic, error) variance components
+#' @param gdsobj SeqVarGDSClass object
+#' @param dat AnnotatedDataFrame with sample.id, outcome, and covariates
+#' @param outcome character string specifying the name of the outcome variable in \code{dat}
+#' @param cov.mat covariance matrix
+#' @param covars A vector of character strings specifying the names of the fixed effect covariates in \code{dat}
+#' @return association test results for outcome and variant
+#' @export
+variant_assoc <- function(variant.sel, beta, varComp, gdsobj, dat, outcome, cov.mat, covars=NULL) {
+    if (!requireNamespace("SeqArray") | !requireNamespace("GENESIS")) {
+        stop("must install SeqArray and GENESIS to use variant_assoc")
+    }
+    
+    # should we use variant.id, or variant.sel for speed?
+    stopifnot(length(variant.sel) == 1)
+
+    SeqArray::seqSetFilter(gdsobj, variant.sel=variant.sel, verbose=FALSE)
+    
+    #sample.index <- match(dat$sample.id, SeqArray::seqGetData(gdsobj, "sample.id"))
+    #geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")[sample.index,]
+    geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")
+    rownames(geno) <- SeqArray::seqGetData(gdsobj, "sample.id")
+    geno <- geno[as.character(dat$sample.id),,drop=FALSE]
+    eff <- variant_effect(G=as.vector(geno), beta=beta, varComp=varComp)
+    #message(eff$beta)
+    #message(eff$h2)
+    dat[[outcome]] <- dat[[outcome]] + eff$Gbeta
+
+    if (nrow(dat) < nrow(cov.mat)) {
+        sel <- rownames(cov.mat) %in% dat$sample.id
+        cov.mat <- cov.mat[sel,sel]
+    }
+
+    #message(seqGetData(gds, "variant.id"))
+    nullmod <- GENESIS::fitNullModel(dat, outcome=outcome, covars=covars, cov.mat=cov.mat, verbose=FALSE)
+    assoc <- GENESIS:::testGenoSingleVar(nullmod, geno[as.character(nullmod$sample.id),])
+    #message(length(nullmod$sample.id), " samples")
+
+    return(assoc)
 }
