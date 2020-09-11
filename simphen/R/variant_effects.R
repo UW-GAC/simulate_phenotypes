@@ -22,7 +22,7 @@ variant_effect <- function(G, h2, beta, varComp) {
         beta <- sqrt((h2*varComp[2])/((1-htot2)*var(G)))
         beta[beta == Inf] <- 0
     } else if (missing(h2)) {
-        h2 <- (1 - varComp[1]/sum(varComp)) / (varComp[2]/(var(G)*beta^2) + varComp[2]/sum(varComp))
+        h2 <- (var(G)*beta^2) / (var(G)*beta^2 + sum(varComp))
     } else {
         stop("h2 or beta must be specified")
     }
@@ -36,13 +36,12 @@ variant_effect <- function(G, h2, beta, varComp) {
 #' 
 #' @param N number of samples
 #' @param h2 heritability
-#' @param beta effect size
 #' @param pval p-value threshold for significance
 #' @return power
 #' @references https://github.com/kaustubhad/gwas-power/blob/master/power_calc_functions.R
 #' @importFrom stats qchisq pchisq
 #' @export
-power <- function(N, h2, beta, pval=5e-8) {
+power <- function(N, h2, pval=5e-8) {
     # Significance threshold for chi-square, corresponding to P-value threshold
     th <- qchisq(pval, df=1, lower.tail=FALSE)
 
@@ -82,14 +81,10 @@ variant_assoc <- function(variant.sel, beta, varComp, gdsobj, dat, outcome, cov.
 
     SeqArray::seqSetFilter(gdsobj, variant.sel=variant.sel, verbose=FALSE)
     
-    #sample.index <- match(dat$sample.id, SeqArray::seqGetData(gdsobj, "sample.id"))
-    #geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")[sample.index,]
     geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")
     rownames(geno) <- SeqArray::seqGetData(gdsobj, "sample.id")
     geno <- geno[as.character(dat$sample.id),,drop=FALSE]
     eff <- variant_effect(G=as.vector(geno), beta=beta, varComp=varComp)
-    #message(eff$beta)
-    #message(eff$h2)
     dat[[outcome]] <- dat[[outcome]] + eff$Gbeta
 
     if (nrow(dat) < nrow(cov.mat)) {
@@ -97,10 +92,8 @@ variant_assoc <- function(variant.sel, beta, varComp, gdsobj, dat, outcome, cov.
         cov.mat <- cov.mat[sel,sel]
     }
 
-    #message(seqGetData(gds, "variant.id"))
     nullmod <- GENESIS::fitNullModel(dat, outcome=outcome, covars=covars, cov.mat=cov.mat, verbose=FALSE)
     assoc <- GENESIS:::testGenoSingleVar(nullmod, geno[as.character(nullmod$sample.id),])
-    #message(length(nullmod$sample.id), " samples")
 
     return(assoc)
 }
