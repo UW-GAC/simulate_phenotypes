@@ -16,8 +16,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 For this example we will use 1000 genomes data. We start with a covariance matrix calcuated using the GENESIS package. We found pairwise kinship with `pcrelate` and created a block diagonal matrix of kinship using `pcrelateToMatrix`. We generate a random normal outcome adjusted for covariance.
 
 ```{r}
-#library(simphen)
-devtools::load_all()
+library(simphen)
 data("1KG_pcrelate_blockDiag_Matrix")
 varComp <- c(4, 10)
 set.seed(8)
