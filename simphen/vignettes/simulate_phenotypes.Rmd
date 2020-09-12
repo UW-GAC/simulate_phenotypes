@@ -16,11 +16,13 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 For this example we will use 1000 genomes data. We start with a covariance matrix calcuated using the GENESIS package. We found pairwise kinship with `pcrelate` and created a block diagonal matrix of kinship using `pcrelateToMatrix`. We generate a random normal outcome adjusted for covariance.
 
 ```{r}
-library(simphen)
+#library(simphen)
+devtools::load_all()
 data("1KG_pcrelate_blockDiag_Matrix")
 varComp <- c(4, 10)
 set.seed(8)
 outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
+head(outcome)
 ```
 
 Next we define strata using 1000 genomes super populations, and calculate variant frequency in each stratum.
@@ -54,17 +56,26 @@ var_afr <- var_single_stratum(freq[,"AFR"], freq[,"EUR"])
 
 # select variants in both
 var_both <- var_multiple_strata(freq[,"AFR"], freq[,"EUR"])
-
 ```
+
+Since the covariance matrix is block diagonal, the order of samples is
+not the same as in the GDS file. Re-order the outcome vector to match
+the genotypes.
+
+```{r}
+outcome.gdsord <- outcome[sample.id]
+head(outcome.gdsord)
+```
+
 
 Add an effect for a variant in only one stratum
 
 ```{r}
 seqSetFilter(gds, variant.sel=var_afr[1], verbose=FALSE)
 geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-eff <- variant_effect(geno, h2=0.01, varComp=varComp)
+eff <- variant_effect(G=geno, h2=0.01, varComp=varComp)
 eff$beta
-outcome.eff <- outcome + eff$Gbeta
+outcome.eff <- outcome.gdsord + eff$Gbeta
 ```
 
 Test association
@@ -91,28 +102,53 @@ assoc_afr <- assocTestSingle(iterator, nullmod_afr, verbose=FALSE)
 assoc_afr
 ```
 
+Convenience function to add effect and test in one step.
+
+```{r}
+dat$outcome <- outcome.gdsord
+variant_assoc(variant.sel=var_afr[1], beta=1.3, varComp=varComp, 
+              gdsobj=gds, dat=dat, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG)
+```
+
+```{r}
+dat.afr <- dat[dat$sample.id %in% strata[["AFR"]],]
+variant_assoc(variant.sel=var_afr[1], beta=1.3, varComp=varComp, 
+              gdsobj=gds, dat=dat.afr, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG)
+```
+
 Add an effect common in both strata - specify effect size
 
 ```{r}
-seqSetFilter(gds, variant.sel=var_both[1], verbose=FALSE)
-geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-eff <- variant_effect(geno, beta=1.5, varComp=varComp)
-eff$h2
-outcome.eff <- outcome + eff$Gbeta
+variant_assoc(variant.sel=var_both[4], beta=1.5, varComp=varComp, 
+              gdsobj=gds, dat=dat, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG)
+```
+
+
+```{r}
+# test with only AFR samples
+variant_assoc(variant.sel=var_both[4], beta=1.5, varComp=varComp, 
+              gdsobj=gds, dat=dat.afr, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG)
 ```
 
 Add an effect different across strata
 
 ```{r}
+seqSetFilter(gds, variant.sel=var_both[4], verbose=FALSE)
+geno <- as.vector(seqGetData(gds, "$dosage_alt"))
+
 afr <- sample.id %in% strata[["AFR"]]
 eff.afr <- variant_effect(geno[afr], beta=1.2, varComp=varComp)
-power(N=sum(afr), h2=eff.afr$h2, beta=eff.afr$beta) 
-outcome.eff.afr <- outcome[afr] + eff.afr$Gbeta
+power(N=sum(afr), h2=eff.afr$h2) 
+outcome.eff.afr <- outcome.gdsord[afr] + eff.afr$Gbeta
 
 eur <- sample.id %in% strata[["EUR"]]
 eff.eur <- variant_effect(geno[eur], beta=1.5, varComp=varComp)
-power(N=sum(eur), h2=eff.eur$h2, beta=eff.eur$beta) 
-outcome.eff.eur <- outcome[eur] + eff.eur$Gbeta
+power(N=sum(eur), h2=eff.eur$h2) 
+outcome.eff.eur <- outcome.gdsord[eur] + eff.eur$Gbeta
 ```
 
 ```{r}
@@ -121,6 +157,8 @@ dat$outcome[afr] <- outcome.eff.afr
 dat$outcome[eur] <- outcome.eff.eur
 nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
                         verbose=FALSE)
+
+seqData <- SeqVarData(gds, sampleData=dat)
 iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
 assoc <- assocTestSingle(iterator, nullmod, verbose=FALSE)
 assoc
