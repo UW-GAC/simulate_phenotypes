@@ -105,6 +105,7 @@ assoc_afr
 Convenience function to add effect and test in one step.
 
 ```{r}
+dat$outcome <- outcome.gdsord
 variant_assoc(variant.sel=var_afr[1], beta=1.3, varComp=varComp, 
               gdsobj=gds, dat=dat, outcome="outcome", 
               cov.mat=blockDiagMatrix1KG)
@@ -120,53 +121,44 @@ variant_assoc(variant.sel=var_afr[1], beta=1.3, varComp=varComp,
 Add an effect common in both strata - specify effect size
 
 ```{r}
-seqSetFilter(gds, variant.sel=var_both[4], verbose=FALSE)
-geno <- as.vector(seqGetData(gds, "$dosage_alt"))
-eff <- variant_effect(geno, beta=1.5, varComp=varComp)
-eff$h2
-outcome.eff <- outcome.gdsord + eff$Gbeta
+variant_assoc(variant.sel=var_both[4], beta=1.5, varComp=varComp, 
+              gdsobj=gds, dat=dat, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG)
 ```
 
-```{r}
-dat$outcome <- outcome.eff
-nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
-                        verbose=FALSE)
-seqData <- SeqVarData(gds, sampleData=dat)
-iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
-assoc <- assocTestSingle(iterator, nullmod, verbose=FALSE)
-assoc
-```
 
 ```{r}
 # test with only AFR samples
-resetIterator(iterator, verbose=FALSE)
-nullmod_afr <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
-                            sample.id=strata[["AFR"]], verbose=FALSE)
-assoc_afr <- assocTestSingle(iterator, nullmod_afr, verbose=FALSE)
-assoc_afr
+variant_assoc(variant.sel=var_both[4], beta=1.5, varComp=varComp, 
+              gdsobj=gds, dat=dat.afr, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG)
 ```
 
 Add an effect different across strata
 
 ```{r}
+seqSetFilter(gds, variant.sel=var_both[4], verbose=FALSE)
+geno <- as.vector(seqGetData(gds, "$dosage_alt"))
+
 afr <- sample.id %in% strata[["AFR"]]
 eff.afr <- variant_effect(geno[afr], beta=1.2, varComp=varComp)
-power(N=sum(afr), h2=eff.afr$h2, beta=eff.afr$beta) 
-outcome.eff.afr <- outcome[afr] + eff.afr$Gbeta
+power(N=sum(afr), h2=eff.afr$h2) 
+outcome.eff.afr <- outcome.gdsord[afr] + eff.afr$Gbeta
 
 eur <- sample.id %in% strata[["EUR"]]
 eff.eur <- variant_effect(geno[eur], beta=1.5, varComp=varComp)
-power(N=sum(eur), h2=eff.eur$h2, beta=eff.eur$beta) 
-outcome.eff.eur <- outcome[eur] + eff.eur$Gbeta
+power(N=sum(eur), h2=eff.eur$h2) 
+outcome.eff.eur <- outcome.gdsord[eur] + eff.eur$Gbeta
 ```
 
 ```{r}
 dat <- AnnotatedDataFrame(data.frame(sample.id, outcome=NA, stringsAsFactors=FALSE))
 dat$outcome[afr] <- outcome.eff.afr
 dat$outcome[eur] <- outcome.eff.eur
-resetIterator(iterator, verbose=FALSE)
 nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
                         verbose=FALSE)
+
+seqData <- SeqVarData(gds, sampleData=dat)
 iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
 assoc <- assocTestSingle(iterator, nullmod, verbose=FALSE)
 assoc
