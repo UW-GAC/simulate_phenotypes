@@ -94,6 +94,7 @@ variant_assoc <- function(variant.sel, beta, varComp, gdsobj, dat, outcome, cov.
 
     nullmod <- GENESIS::fitNullModel(dat, outcome=outcome, covars=covars, cov.mat=cov.mat, verbose=FALSE)
     assoc <- GENESIS:::testGenoSingleVar(nullmod, geno[as.character(nullmod$sample.id),])
+    assoc <- cbind(eff[c("beta", "h2")], assoc)
 
     return(assoc)
 }
