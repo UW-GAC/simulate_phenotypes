@@ -41,7 +41,7 @@ variant_effect <- function(G, h2, beta, varComp) {
 #' @references https://github.com/kaustubhad/gwas-power/blob/master/power_calc_functions.R
 #' @importFrom stats qchisq pchisq
 #' @export
-power <- function(N, h2, pval=5e-8) {
+power <- function(N, h2, pval=5e-9) {
     # Significance threshold for chi-square, corresponding to P-value threshold
     th <- qchisq(pval, df=1, lower.tail=FALSE)
 
