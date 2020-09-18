@@ -48,3 +48,13 @@ varComp <- c(3,7)
 system.time(outcome <- simphen:::outcome_from_covMat_block_indices(covmat, blocks, varComp))
 ```
 
+Add sample.ids to outcome - ran this with an older version of code that didn't save them
+
+```{r}
+outcomes <- readRDS("/sbgenomics/project-files/sim_outcomes_AfrEur_varComp_3_7.rds")
+
+load("/sbgenomics/project-files/covmat_blocks_AfrEur_2020-07-24.RData")
+
+outcomes.named <- lapply(outcomes, setNames, colnames(covmat))
+saveRDS(outcomes.named, file="/sbgenomics/output-files/sim_outcomes_AfrEur_varComp_3_7_named.rds")
+```
