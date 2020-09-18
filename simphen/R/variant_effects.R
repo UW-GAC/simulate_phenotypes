@@ -59,9 +59,12 @@ power <- function(N, h2, pval=5e-9) {
 #'
 #' Run association test for an outcome and a variant
 #'
+#' Either h2 or beta must be specified.
+#'
 #' Order of samples in \code{outcome} and \code{covars} must match \code{cov.mat}. The rownames of \code{cov.mat} must correspond to the \code{sample.id} node in \code{gdsobj}.
 #'
 #' @param variant.sel index of variant in unfilted gdsobj
+#' @param h2 heritability
 #' @param beta effect size for variant
 #' @param varComp 2-element vector with (genetic, error) variance components
 #' @param gdsobj SeqVarGDSClass object
@@ -71,10 +74,12 @@ power <- function(N, h2, pval=5e-9) {
 #' @param covars A vector of character strings specifying the names of the fixed effect covariates in \code{dat}
 #' @return association test results for outcome and variant
 #' @export
-variant_assoc <- function(variant.sel, beta, varComp, gdsobj, dat, outcome, cov.mat, covars=NULL) {
+variant_assoc <- function(variant.sel, h2=NULL, beta=NULL, varComp, gdsobj, dat, outcome, cov.mat, covars=NULL) {
     if (!requireNamespace("SeqArray") | !requireNamespace("GENESIS")) {
         stop("must install SeqArray and GENESIS to use variant_assoc")
     }
+    
+    if (is.null(h2) & is.null(beta)) stop("one of h2 or beta must be specified")
     
     # should we use variant.id, or variant.sel for speed?
     stopifnot(length(variant.sel) == 1)
@@ -84,7 +89,11 @@ variant_assoc <- function(variant.sel, beta, varComp, gdsobj, dat, outcome, cov.
     geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")
     rownames(geno) <- SeqArray::seqGetData(gdsobj, "sample.id")
     geno <- geno[as.character(dat$sample.id),,drop=FALSE]
-    eff <- variant_effect(G=as.vector(geno), beta=beta, varComp=varComp)
+    if (is.null(h2)) {
+        eff <- variant_effect(G=as.vector(geno), beta=beta, varComp=varComp)
+    } else {
+        eff <- variant_effect(G=as.vector(geno), h2=h2, varComp=varComp)
+    }
     dat[[outcome]] <- dat[[outcome]] + eff$Gbeta
 
     if (nrow(dat) < nrow(cov.mat)) {
