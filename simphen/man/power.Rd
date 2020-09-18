@@ -4,7 +4,7 @@
 \alias{power}
 \title{Calculate power}
 \usage{
-power(N, h2, pval = 5e-08)
+power(N, h2, pval = 5e-09)
 }
 \arguments{
 \item{N}{number of samples}

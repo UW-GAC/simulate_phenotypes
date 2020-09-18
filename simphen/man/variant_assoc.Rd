@@ -6,7 +6,8 @@
 \usage{
 variant_assoc(
   variant.sel,
-  beta,
+  h2 = NULL,
+  beta = NULL,
   varComp,
   gdsobj,
   dat,
@@ -17,6 +18,8 @@ variant_assoc(
 }
 \arguments{
 \item{variant.sel}{index of variant in unfilted gdsobj}
+
+\item{h2}{heritability}
 
 \item{beta}{effect size for variant}
 
@@ -39,5 +42,7 @@ association test results for outcome and variant
 Run association test for an outcome and a variant
 }
 \details{
+Either h2 or beta must be specified.
+
 Order of samples in \code{outcome} and \code{covars} must match \code{cov.mat}. The rownames of \code{cov.mat} must correspond to the \code{sample.id} node in \code{gdsobj}.
 }
