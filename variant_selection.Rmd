@@ -9,8 +9,7 @@ library(ggplot2)
 #remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
 remotes::install_local("/sbgenomics/workspace/simulate_phenotypes/simphen", upgrade=FALSE)
 library(simphen)
-#library(devtools)
-#load_all("/sbgenomics/workspace/simulate_phenotypes/simphen")
+#devtools::load_all("/sbgenomics/workspace/simulate_phenotypes/simphen")
 ```
 
 Frequency of variants in chromosome 1 in AfrAm and EurAm strata
@@ -55,11 +54,73 @@ length(obs_eur)
 ```
 
 
-
 Load GDS file to get genotypes
 
 ```{r}
 library(SeqArray)
 gds <- seqOpen("/sbgenomics/project-files/freeze8_gds/freeze.8.pass_poly.gtonly.minDP0_chr1.gds")
+
+samples.afr <- readRDS("/sbgenomics/project-files/strata/freeze8_samples_AfrAm_2020-07-23.rds")
+samples.eur <- readRDS("/sbgenomics/project-files/strata/freeze8_samples_EurAm_2020-07-23.rds")
 seqSetFilter(gds, sample.id=c(samples.afr, samples.eur))
+```
+
+Get index of variants for each variant.id (required for variant_assoc function)
+
+```{r}
+variant.id <- seqGetData(gds, "variant.id")
+freq <- left_join(freq, data.frame(variant.id, variant.sel=1:length(variant.id)))
+```
+
+What values of h2 give us reasonable power in both populations?
+
+```{r}
+for (h2 in c(0.005, 0.003, 0.002, 0.0015, 0.001)) {
+  print(paste("h2=", h2, "Afr power:", power(N=length(samples.afr), h2=h2)))
+  print(paste("h2=", h2, "Eur power:", power(N=length(samples.eur), h2=h2)))
+  print(paste("h2=", h2, "Total power:", power(N=length(c(samples.afr, samples.eur)), h2=h2)))
+}
+```
+
+
+# Same allele freq; same effect size and heritability
+
+```{r}
+same_freq <- freq %>%
+  filter(freq.afr < 0.5, freq.eur < 0.5,
+         freq.afr > 0.05, freq.eur > 0.05, 
+         abs(freq.afr - freq.eur) < 0.001)
+nrow(same_freq)
+```
+
+sample outcome and match order to samples in GDS file
+
+```{r}
+outcomes <- readRDS("/sbgenomics/project-files/sim_outcomes_AfrEur_varComp_3_7_named.rds")
+this.outcome <- outcomes[[sample(length(outcomes), 1)]]
+```
+
+get PCs and kinship
+
+```{r}
+load("/sbgenomics/project-files/pcair_results.RData")
+pcs <- as.data.frame(pca$vectors)
+names(pcs) <- paste0("PC", 1:ncol(pcs))
+pcs$sample.id <- rownames(pcs)
+
+load("/sbgenomics/project-files/covmat_blocks_AfrEur_2020-07-24.RData")
+
+dat <- data.frame(outcome=this.outcome, sample.id=names(this.outcome), 
+                  stringsAsFactors=FALSE)
+dat <- dplyr::left_join(dat, pcs)
+dat <- Biobase::AnnotatedDataFrame(dat)
+```
+
+get variant effect
+
+```{r}
+v1 <- variant_assoc(variant.sel=same_freq$variant.sel[1], h2=0.001, varComp=c(3,7),
+                    gdsobj=gds, dat=dat, outcome="outcome", cov.mat=covmat, 
+                    covars=paste0("PC", 1:11))
+v1
 ```
