@@ -13,6 +13,8 @@ vignette: >
 knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 ```
 
+# Simulate outcome from covariance
+
 For this example we will use 1000 genomes data. We start with a covariance matrix calcuated using the GENESIS package. We found pairwise kinship with `pcrelate` and created a block diagonal matrix of kinship using `pcrelateToMatrix`. We generate a random normal outcome adjusted for covariance.
 
 ```{r}
@@ -23,6 +25,8 @@ set.seed(8)
 outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
 head(outcome)
 ```
+
+## Define strata
 
 Next we define strata using 1000 genomes super populations, and calculate variant frequency in each stratum.
 
@@ -47,7 +51,6 @@ freq <- do.call(cbind, lapply(strata, function(x) {
 seqResetFilter(gds, verbose=FALSE)
 ```
 
-Select variants based on frequency in different strata
 
 ```{r}
 # select variants in AFR but not EUR
@@ -56,6 +59,11 @@ var_afr <- var_single_stratum(freq[,"AFR"], freq[,"EUR"])
 # select variants in both
 var_both <- var_multiple_strata(freq[,"AFR"], freq[,"EUR"])
 ```
+
+
+# Adding one variant at a time
+
+## Add an effect for a variant in only one stratum
 
 Since the covariance matrix is block diagonal, the order of samples is
 not the same as in the GDS file. Re-order the outcome vector to match
@@ -67,7 +75,6 @@ head(outcome.gdsord)
 ```
 
 
-Add an effect for a variant in only one stratum
 
 ```{r}
 seqSetFilter(gds, variant.sel=var_afr[1], verbose=FALSE)
@@ -117,7 +124,7 @@ variant_assoc(variant.sel=var_afr[1], beta=1.3, varComp=varComp,
               cov.mat=blockDiagMatrix1KG)
 ```
 
-Add an effect common in both strata - specify effect size
+## Add an effect common in both strata - specify effect size
 
 ```{r}
 variant_assoc(variant.sel=var_both[4], beta=1.5, varComp=varComp, 
@@ -133,7 +140,7 @@ variant_assoc(variant.sel=var_both[4], beta=1.5, varComp=varComp,
               cov.mat=blockDiagMatrix1KG)
 ```
 
-Add an effect different across strata
+## Add an effect different across strata
 
 ```{r}
 seqSetFilter(gds, variant.sel=var_both[4], verbose=FALSE)
@@ -178,6 +185,29 @@ nullmod_eur <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
 assoc_eur <- assocTestSingle(iterator, nullmod_eur, verbose=FALSE)
 assoc_eur
 ```
+
+
+# Use LD pruning to select independent variants
+
+Prune first in pooled sample with MAF threshold 0.01, then in each population separately with no threshold.
+
+```{r}
+library(SNPRelate)
+seqSetFilter(gds, verbose=FALSE)
+# use a high ld.threshold only because the variant set is so small
+pruned.all <- snpgdsLDpruning(gds, sample.id=c(strata[["AFR"]], strata[["EUR"]]),
+                              maf=0.01, method="corr", ld.threshold=0.5)
+pruned.all <- unlist(pruned.all, use.names=FALSE)
+pruned.afr <- snpgdsLDpruning(gds, sample.id=strata[["AFR"]], snp.id=pruned.all,
+                              remove.monosnp=FALSE, method="corr", ld.threshold=0.5)
+pruned.afr <- unlist(pruned.afr, use.names=FALSE)
+pruned.eur <- snpgdsLDpruning(gds, sample.id=strata[["EUR"]], snp.id=pruned.afr,
+                              remove.monosnp=FALSE, method="corr", ld.threshold=0.5)
+pruned <- unlist(pruned.eur, use.names=FALSE)
+length(pruned)
+```
+
+
 
 ```{r}
 seqClose(gds)
