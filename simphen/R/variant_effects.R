@@ -55,46 +55,42 @@ power <- function(N, h2, pval=5e-9) {
 }
 
 
-#' Run association test for an outcome and a variant
+
+#' Run association test for an outcome and a set of variants
 #'
-#' Run association test for an outcome and a variant
+#' Run association test for an outcome and a set of variants
 #'
 #' Either h2 or beta must be specified.
 #'
-#' Order of samples in \code{outcome} and \code{covars} must match \code{cov.mat}. The rownames of \code{cov.mat} must correspond to the \code{sample.id} node in \code{gdsobj}.
-#'
-#' @param variant.sel index of variant in unfilted gdsobj
+#' @param G genotype matrix with sample.id as rownames
 #' @param h2 heritability
 #' @param beta effect size for variant
 #' @param varComp 2-element vector with (genetic, error) variance components
-#' @param gdsobj SeqVarGDSClass object
 #' @param dat AnnotatedDataFrame with sample.id, outcome, and covariates
 #' @param outcome character string specifying the name of the outcome variable in \code{dat}
-#' @param cov.mat covariance matrix
+#' @param cov.mat covariance matrix with sample.id as rownames
 #' @param covars A vector of character strings specifying the names of the fixed effect covariates in \code{dat}
 #' @return association test results for outcome and variant
 #' @export
-variant_assoc <- function(variant.sel, h2=NULL, beta=NULL, varComp, gdsobj, dat, outcome, cov.mat, covars=NULL) {
-    if (!requireNamespace("SeqArray") | !requireNamespace("GENESIS")) {
-        stop("must install SeqArray and GENESIS to use variant_assoc")
+variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat, covars=NULL) {
+    if (!requireNamespace("GENESIS")) {
+        stop("must install GENESIS to use variant_assoc")
     }
     
     if (is.null(h2) & is.null(beta)) stop("one of h2 or beta must be specified")
     
-    # should we use variant.id, or variant.sel for speed?
-    stopifnot(length(variant.sel) == 1)
-
-    SeqArray::seqSetFilter(gdsobj, variant.sel=variant.sel, verbose=FALSE)
-    
-    geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")
-    rownames(geno) <- SeqArray::seqGetData(gdsobj, "sample.id")
-    geno <- geno[as.character(dat$sample.id),,drop=FALSE]
-    if (is.null(h2)) {
-        eff <- variant_effect(G=as.vector(geno), beta=beta, varComp=varComp)
-    } else {
-        eff <- variant_effect(G=as.vector(geno), h2=h2, varComp=varComp)
+    G <- G[as.character(dat$sample.id),,drop=FALSE]
+    res <- list()
+    for (i in 1:ncol(G)) {
+        if (is.null(h2)) {
+            eff <- variant_effect(G=as.vector(G[,i]), beta=beta, varComp=varComp)
+        } else {
+            eff <- variant_effect(G=as.vector(G[,i]), h2=h2, varComp=varComp)
+        }
+        dat[[outcome]] <- dat[[outcome]] + eff$Gbeta
+        res[[i]] <- eff[c("beta", "h2")]
     }
-    dat[[outcome]] <- dat[[outcome]] + eff$Gbeta
+    res <- as.data.frame(data.table::rbindlist(res))
 
     if (nrow(dat) < nrow(cov.mat)) {
         sel <- rownames(cov.mat) %in% dat$sample.id
@@ -102,8 +98,25 @@ variant_assoc <- function(variant.sel, h2=NULL, beta=NULL, varComp, gdsobj, dat,
     }
 
     nullmod <- GENESIS::fitNullModel(dat, outcome=outcome, covars=covars, cov.mat=cov.mat, start=varComp, verbose=FALSE)
-    assoc <- GENESIS:::testGenoSingleVar(nullmod, geno[as.character(nullmod$sample.id),])
-    assoc <- cbind(eff[c("beta", "h2")], assoc)
+    assoc <- GENESIS:::testGenoSingleVar(nullmod, G[as.character(nullmod$sample.id),])
+    assoc <- cbind(res, assoc)
 
     return(assoc)
+}
+
+
+
+#' Return genotypes for set of samples and variants
+#' 
+variant_genotypes <- function(gdsobj, variant.id, sample.id=NULL) {
+    if (!requireNamespace("SeqArray")) {
+        stop("must install SeqArray and GENESIS to use variant_genotypes")
+    }
+    
+    #SeqArray::seqSetFilter(gdsobj, variant.sel=variant.sel, sample.id=sample.id, verbose=FALSE)
+    SeqArray::seqSetFilter(gdsobj, variant.id=variant.id, sample.id=sample.id, verbose=FALSE)
+    
+    geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")
+    rownames(geno) <- SeqArray::seqGetData(gdsobj, "sample.id")
+    return(geno)
 }

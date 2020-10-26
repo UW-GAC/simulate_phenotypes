@@ -9,7 +9,7 @@ License: MIT + file LICENSE
 Depends:
 Imports: stats, Matrix, data.table, igraph
 Suggests: roxygen2, testthat, knitr, rmarkdown, 
-    SeqArray, SeqVarTools, Biobase, GENESIS
+    SeqArray, SeqVarTools, Biobase, GENESIS, SNPRelate
 VignetteBuilder: knitr
 LazyLoad: no
 RoxygenNote: 7.1.0

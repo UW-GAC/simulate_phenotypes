@@ -59,36 +59,49 @@ test_that("variant assoc", {
     gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     gdsfile <- system.file("extdata", "1KG_phase3_chr1_SNVsubset.gds", package="simphen")
     gds <- seqOpen(gdsfile)
+    data("1KG_phase3_annot")
     data("1KG_pcrelate_blockDiag_Matrix")
     varComp <- c(4,10)
     set.seed(4)
     outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
-    set.seed(5)
-    covars <- data.frame(x=rnorm(ncol(blockDiagMatrix1KG)))
-    dat <- Biobase::AnnotatedDataFrame(cbind(data.frame(outcome), covars, sample.id=names(outcome), stringsAsFactors=FALSE))
+    dat <- annot
+    dat$outcome <- outcome[dat$sample.id]
 
+    # select variants for testing
+    set.seed(5)
+    pruned <- SNPRelate::snpgdsLDpruning(gds, maf=0.05, verbose=FALSE)
+    pruned.id <- unlist(pruned, use.names=FALSE)
+    #var.id <- seqGetData(gds, "variant.id")
+    #pruned.sel <- which(var.id %in% pruned.id)
+    
     beta <- 1.2
-    assoc <- variant_assoc(variant.sel=18, beta=beta, varComp=varComp,
-                           gdsobj=gds, dat=dat,
-                           outcome="outcome", covars="x",
+    #geno <- variant_genotypes(gds, variant.sel=pruned.sel)
+    geno <- variant_genotypes(gds, variant.id=pruned.id[c(18,10000)])
+    assoc <- variant_assoc(geno[,1,drop=FALSE], beta=beta, varComp=varComp,
+                           dat=dat, outcome="outcome", covars="Population",
                            cov.mat=blockDiagMatrix1KG)
-    expect_equal(assoc$Est, beta, tolerance=0.01)
+    expect_true(abs(assoc$Est - beta) < assoc$Est.SE)
 
     # check fewer samples
-    assoc2 <- variant_assoc(variant.sel=18, beta=beta, varComp=varComp,
-                           gdsobj=gds, dat=dat[1:1000,],
-                           outcome="outcome", covars="x",
-                           cov.mat=blockDiagMatrix1KG)
-    expect_true(assoc2$Est < assoc$Est)
+    assoc2 <- variant_assoc(geno[,1,drop=FALSE], beta=beta, varComp=varComp,
+                            dat=dat[1:1000,], outcome="outcome", covars="Population",
+                            cov.mat=blockDiagMatrix1KG)
+    #expect_true(assoc2$Est < assoc$Est)
 
     # rearrange sample.id
     set.seed(6)
     dat3 <- dat[sample(nrow(dat)),]
-    assoc3 <- variant_assoc(variant.sel=18, beta=beta, varComp=varComp,
-                            gdsobj=gds, dat=dat3,
-                            outcome="outcome", covars="x",
+    assoc3 <- variant_assoc(geno[,1,drop=FALSE], beta=beta, varComp=varComp,
+                            dat=dat3, outcome="outcome", covars="Population",
                             cov.mat=blockDiagMatrix1KG)
     expect_equal(assoc3$Est, assoc$Est)
+    
+    # multiple variants
+    #geno <- variant_genotypes(gds, variant.sel=pruned.sel[c(1,100,200)])
+    geno <- variant_genotypes(gds, variant.id=pruned.id[c(1,100,200)])
+    assoc4 <- variant_assoc(geno, beta=beta, varComp=varComp,
+                            dat=dat, outcome="outcome", covars="Population",
+                            cov.mat=blockDiagMatrix1KG)
     
     seqClose(gds)
 })
@@ -99,35 +112,35 @@ test_that("variant assoc matches iterator method", {
     gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     gdsfile <- system.file("extdata", "1KG_phase3_chr1_SNVsubset.gds", package="simphen")
     gds <- seqOpen(gdsfile)
+    data("1KG_phase3_annot")
     data("1KG_pcrelate_blockDiag_Matrix")
     varComp <- c(4,10)
     set.seed(7)
     outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
-    set.seed(8)
-    covars <- data.frame(x=rnorm(ncol(blockDiagMatrix1KG)))
-    dat <- Biobase::AnnotatedDataFrame(cbind(data.frame(outcome), covars, sample.id=names(outcome), stringsAsFactors=FALSE))
-
-    var <- 132
+    dat <- annot
+    dat$outcome <- outcome[dat$sample.id]
+    
+    #var <- 1000
+    var <- 101079
     beta <- 1.2
-    assoc <- variant_assoc(variant.sel=var, beta=beta, varComp=varComp,
-                           gdsobj=gds, dat=dat,
-                           outcome="outcome", covars="x",
+    #geno <- variant_genotypes(gds, variant.sel=var)
+    geno <- variant_genotypes(gds, variant.id=var)
+    assoc <- variant_assoc(geno, beta=beta, varComp=varComp,
+                           dat=dat, outcome="outcome", covars="Population",
                            cov.mat=blockDiagMatrix1KG)
 
-    seqSetFilter(gds, variant.sel=var, verbose=FALSE)
-    geno <- as.vector(seqGetData(gds, "$dosage_alt"))
     eff <- variant_effect(G=geno, beta=beta, varComp=varComp)
-    dat <- dat[seqGetData(gds, "sample.id"),]
     dat$outcome <- dat$outcome + eff$Gbeta
-    nullmod <- fitNullModel(dat, outcome="outcome", covars="x",
+    nullmod <- fitNullModel(dat, outcome="outcome", covars="Population",
                             cov.mat=blockDiagMatrix1KG, 
                             verbose=FALSE)
     seqData <- SeqVarData(gds, sampleData=dat)
-    seqSetFilter(gds, variant.sel=var, verbose=FALSE)
+    #seqSetFilter(gds, variant.sel=var, verbose=FALSE)
+    seqSetFilter(gds, variant.id=var, verbose=FALSE)
     iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
     assoc2 <- assocTestSingle(iterator, nullmod, verbose=FALSE)
 
-    expect_equal(assoc$Est, assoc2$Est)
+    expect_equal(assoc$Est, assoc2$Est, tolerance=1e-6)
     
     seqClose(gds)
 })
