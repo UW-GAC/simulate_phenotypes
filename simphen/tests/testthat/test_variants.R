@@ -55,6 +55,26 @@ test_that("variant selection", {
 })
 
 
+test_that("variant_genotypes", {
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
+    gdsfile <- system.file("extdata", "1KG_phase3_chr1_SNVsubset.gds", package="simphen")
+    gds <- seqOpen(gdsfile)
+    variant.id <- seqGetData(gds, "variant.id")
+    sample.id <- seqGetData(gds, "sample.id")
+    
+    geno <- variant_genotypes(gds, variant.sel=1:10)
+    expect_equal(colnames(geno), as.character(variant.id[1:10]))
+    expect_equal(rownames(geno), sample.id)
+    
+    geno2 <- variant_genotypes(gds, variant.id=variant.id[1:10])
+    expect_equal(geno, geno2)
+    
+    geno <- variant_genotypes(gds, variant.sel=1:10, sample.id=sample.id[1:10])
+    expect_equal(rownames(geno), sample.id[1:10])
+    
+    seqClose(gds)
+})
+
 
 test_that("variant assoc matches iterator method", {
     gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
@@ -68,15 +88,13 @@ test_that("variant assoc matches iterator method", {
     dat <- annot
     dat$outcome <- outcome[dat$sample.id]
     
-    #var <- 1000
-    var <- 101079
+    var <- 1000
     beta <- 1.2
-    #geno <- variant_genotypes(gds, variant.sel=var)
-    geno <- variant_genotypes(gds, variant.id=var)
+    geno <- variant_genotypes(gds, variant.sel=var)
     assoc <- variant_assoc(geno, beta=beta, varComp=varComp,
                            dat=dat, outcome="outcome", covars="Population",
                            cov.mat=blockDiagMatrix1KG)
-    expect_equals(assoc$group, "all")
+    expect_equal(assoc$group, "all")
 
     eff <- variant_effect(G=geno, beta=beta, varComp=varComp)
     dat$outcome <- dat$outcome + eff$Gbeta
@@ -84,8 +102,7 @@ test_that("variant assoc matches iterator method", {
                             cov.mat=blockDiagMatrix1KG, 
                             verbose=FALSE)
     seqData <- SeqVarData(gds, sampleData=dat)
-    #seqSetFilter(gds, variant.sel=var, verbose=FALSE)
-    seqSetFilter(gds, variant.id=var, verbose=FALSE)
+    seqSetFilter(gds, variant.sel=var, verbose=FALSE)
     iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
     assoc2 <- assocTestSingle(iterator, nullmod, verbose=FALSE)
 
@@ -111,15 +128,12 @@ test_that("variant assoc", {
     set.seed(5)
     pruned <- SNPRelate::snpgdsLDpruning(gds, maf=0.05, verbose=FALSE)
     pruned.id <- unlist(pruned, use.names=FALSE)
-    #var.id <- seqGetData(gds, "variant.id")
-    #pruned.sel <- which(var.id %in% pruned.id)
     
     # select strata
     strata <- lapply(c("AFR", "EUR"), function(x) dat$sample.id[dat$Super.Population %in% x])
     names(strata) <- c("AFR", "EUR")
     
     beta <- list(AFR=1.2, EUR=1.2)
-    #geno <- variant_genotypes(gds, variant.sel=pruned.sel)
     geno <- variant_genotypes(gds, variant.id=pruned.id[1:3])
     assoc <- variant_assoc(geno[,1,drop=FALSE], strata=strata, beta=beta, varComp=varComp,
                            dat=dat, outcome="outcome", covars="Population",
@@ -143,7 +157,6 @@ test_that("variant assoc", {
     expect_equal(assoc3$Est, assoc$Est)
     
     # multiple variants
-    #geno <- variant_genotypes(gds, variant.sel=pruned.sel[c(1,100,200)])
     geno <- variant_genotypes(gds, variant.id=pruned.id[c(1,20,30)])
     assoc4 <- variant_assoc(geno, strata=strata, beta=beta, varComp=varComp,
                             dat=dat, outcome="outcome", covars="Population",

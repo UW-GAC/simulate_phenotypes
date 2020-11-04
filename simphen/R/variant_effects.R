@@ -174,15 +174,29 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
 
 #' Return genotypes for set of samples and variants
 #' 
-variant_genotypes <- function(gdsobj, variant.id, sample.id=NULL) {
+#' @param gdsobj \code{\link{SeqVarGDSClass}} object
+#' @param variant.sel indices of variants to return
+#' @param variant.id ids of variants to return
+#' @param sample.id ids of samples to return
+#' @return matrix of genotypes
+#' @export
+variant_genotypes <- function(gdsobj, variant.sel, variant.id, sample.id=NULL) {
     if (!requireNamespace("SeqArray")) {
         stop("must install SeqArray and GENESIS to use variant_genotypes")
     }
     
-    #SeqArray::seqSetFilter(gdsobj, variant.sel=variant.sel, sample.id=sample.id, verbose=FALSE)
-    SeqArray::seqSetFilter(gdsobj, variant.id=variant.id, sample.id=sample.id, verbose=FALSE)
+    if (missing(variant.sel) & missing(variant.id)) {
+        stop("one of variant.sel or variant.id must be specified")
+    }
+    
+    if (!missing(variant.sel)) {
+        SeqArray::seqSetFilter(gdsobj, variant.sel=variant.sel, sample.id=sample.id, verbose=FALSE)
+    } else {
+        SeqArray::seqSetFilter(gdsobj, variant.id=variant.id, sample.id=sample.id, verbose=FALSE)
+    }
     
     geno <- SeqArray::seqGetData(gdsobj, "$dosage_alt")
     rownames(geno) <- SeqArray::seqGetData(gdsobj, "sample.id")
+    colnames(geno) <- SeqArray::seqGetData(gdsobj, "variant.id")
     return(geno)
 }

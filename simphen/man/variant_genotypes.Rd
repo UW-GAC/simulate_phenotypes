@@ -4,7 +4,19 @@
 \alias{variant_genotypes}
 \title{Return genotypes for set of samples and variants}
 \usage{
-variant_genotypes(gdsobj, variant.id, sample.id = NULL)
+variant_genotypes(gdsobj, variant.sel, variant.id, sample.id = NULL)
+}
+\arguments{
+\item{gdsobj}{\code{\link{SeqVarGDSClass}} object}
+
+\item{variant.sel}{indices of variants to return}
+
+\item{variant.id}{ids of variants to return}
+
+\item{sample.id}{ids of samples to return}
+}
+\value{
+matrix of genotypes
 }
 \description{
 Return genotypes for set of samples and variants
