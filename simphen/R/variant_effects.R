@@ -155,6 +155,7 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
         N <- length(samp)
         G.grp <- G[as.character(samp),,drop=FALSE]
         freq <- 0.5*colMeans(G.grp, na.rm=TRUE)
+        if (is.null(beta)) beta <- lapply(res, function(x) x$beta)
         beta.pooled <- sum(sapply(names(strata), function(grp) length(strata[[grp]])*beta[[grp]])) / N
         h2.pooled <- apply(G.grp, 2, heritability, beta.pooled, varComp)
         power.pooled <- power(N, h2.pooled, pval=power.signif)
