@@ -19,6 +19,7 @@ library(Biobase)
 library(SeqArray)
 library(SeqVarTools)
 library(GENESIS)
+library(SNPRelate)
 ```
 
 # Simulate outcome from covariance
@@ -33,7 +34,7 @@ outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
 head(outcome)
 ```
 
-## Define strata
+# Define strata
 
 Next we define strata using 1000 genomes super populations, and calculate variant frequency in each stratum.
 
@@ -141,27 +142,40 @@ variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
 
 
 
-# Use LD pruning to select independent variants
+# Add multiple variant effects to same outcome
+
+## Use LD pruning to select independent variants
 
 Prune first in pooled sample with MAF threshold 0.01, then in each population separately with no threshold.
 
 ```{r}
-library(SNPRelate)
 seqSetFilter(gds, verbose=FALSE)
 # use a high ld.threshold only because the variant set is so small
-pruned.all <- snpgdsLDpruning(gds, sample.id=c(strata[["AFR"]], strata[["EUR"]]),
+set.seed(7)
+pruned.all <- snpgdsLDpruning(gds, sample.id=unlist(strata2),
                               maf=0.01, method="corr", ld.threshold=0.5)
 pruned.all <- unlist(pruned.all, use.names=FALSE)
-pruned.afr <- snpgdsLDpruning(gds, sample.id=strata[["AFR"]], snp.id=pruned.all,
+
+set.seed(71)
+pruned.afr <- snpgdsLDpruning(gds, sample.id=strata2[["AFR"]], snp.id=pruned.all,
                               remove.monosnp=FALSE, method="corr", ld.threshold=0.5)
 pruned.afr <- unlist(pruned.afr, use.names=FALSE)
-pruned.eur <- snpgdsLDpruning(gds, sample.id=strata[["EUR"]], snp.id=pruned.afr,
+
+set.seed(72)
+pruned.eur <- snpgdsLDpruning(gds, sample.id=strata2[["EUR"]], snp.id=pruned.afr,
                               remove.monosnp=FALSE, method="corr", ld.threshold=0.5)
 pruned <- unlist(pruned.eur, use.names=FALSE)
 length(pruned)
 ```
 
+Add effects from first 5 pruned variants
 
+```{r}
+geno <- variant_genotypes(gds, variant.id=pruned[1:5], sample.id=unlist(strata2))
+beta <- list(AFR=1.2, EUR=1.1)
+variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome", 
+              cov.mat=blockDiagMatrix1KG, strata=strata2, covars="Population")
+```
 
 ```{r}
 seqClose(gds)
