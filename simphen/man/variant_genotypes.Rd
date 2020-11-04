@@ -7,7 +7,7 @@
 variant_genotypes(gdsobj, variant.sel, variant.id, sample.id = NULL)
 }
 \arguments{
-\item{gdsobj}{\code{\link{SeqVarGDSClass}} object}
+\item{gdsobj}{\code{\link[SeqArray]{SeqVarGDSClass}} object}
 
 \item{variant.sel}{indices of variants to return}
 

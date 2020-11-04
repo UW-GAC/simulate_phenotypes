@@ -136,9 +136,9 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
                 eff <- variant_effect(G=as.vector(G.grp[,i]), h2=h2[[grp]], varComp=varComp)
             }
             
-            tmp <- pData(dat)
+            tmp <- Biobase::pData(dat)
             tmp[samp, outcome] <- tmp[samp, outcome] + eff$Gbeta
-            pData(dat) <- tmp
+            Biobase::pData(dat) <- tmp
             res.grp[[i]] <- list(group=grp, N=N, beta=eff$beta, h2=eff$h2, power=power(N, eff$h2, pval=power.signif))
         }
         res.grp <- as.data.frame(data.table::rbindlist(res.grp))
@@ -175,7 +175,7 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
 
 #' Return genotypes for set of samples and variants
 #' 
-#' @param gdsobj \code{\link{SeqVarGDSClass}} object
+#' @param gdsobj \code{\link[SeqArray]{SeqVarGDSClass}} object
 #' @param variant.sel indices of variants to return
 #' @param variant.id ids of variants to return
 #' @param sample.id ids of samples to return
