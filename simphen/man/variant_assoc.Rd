@@ -2,22 +2,23 @@
 % Please edit documentation in R/variant_effects.R
 \name{variant_assoc}
 \alias{variant_assoc}
-\title{Run association test for an outcome and a variant}
+\title{Run association test for an outcome and a set of variants}
 \usage{
 variant_assoc(
-  variant.sel,
+  G,
   h2 = NULL,
   beta = NULL,
   varComp,
-  gdsobj,
   dat,
   outcome,
   cov.mat,
-  covars = NULL
+  strata = NULL,
+  covars = NULL,
+  power.signif = 5e-09
 )
 }
 \arguments{
-\item{variant.sel}{index of variant in unfilted gdsobj}
+\item{G}{genotype matrix with sample.id as rownames and variant.id as colnames}
 
 \item{h2}{heritability}
 
@@ -25,24 +26,24 @@ variant_assoc(
 
 \item{varComp}{2-element vector with (genetic, error) variance components}
 
-\item{gdsobj}{SeqVarGDSClass object}
-
 \item{dat}{AnnotatedDataFrame with sample.id, outcome, and covariates}
 
 \item{outcome}{character string specifying the name of the outcome variable in \code{dat}}
 
-\item{cov.mat}{covariance matrix}
+\item{cov.mat}{covariance matrix with sample.id as rownames}
+
+\item{strata}{named list of sample.id in strata}
 
 \item{covars}{A vector of character strings specifying the names of the fixed effect covariates in \code{dat}}
+
+\item{power.signif}{p-value threshold for significance in power calculations}
 }
 \value{
 association test results for outcome and variant
 }
 \description{
-Run association test for an outcome and a variant
+Run association test for an outcome and a set of variants
 }
 \details{
 Either h2 or beta must be specified.
-
-Order of samples in \code{outcome} and \code{covars} must match \code{cov.mat}. The rownames of \code{cov.mat} must correspond to the \code{sample.id} node in \code{gdsobj}.
 }
