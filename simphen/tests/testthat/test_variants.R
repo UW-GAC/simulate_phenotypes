@@ -144,3 +144,62 @@ test_that("variant assoc matches iterator method", {
     
     seqClose(gds)
 })
+
+
+test_that("variant assoc mult", {
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
+    gdsfile <- system.file("extdata", "1KG_phase3_chr1_SNVsubset.gds", package="simphen")
+    gds <- seqOpen(gdsfile)
+    data("1KG_phase3_annot")
+    data("1KG_pcrelate_blockDiag_Matrix")
+    varComp <- c(4,10)
+    set.seed(4)
+    outcome <- outcome_from_covMat_blocks(blockDiagMatrix1KG, varComp)
+    dat <- annot
+    dat$outcome <- outcome[dat$sample.id]
+    
+    # select variants for testing
+    set.seed(5)
+    pruned <- SNPRelate::snpgdsLDpruning(gds, maf=0.05, verbose=FALSE)
+    pruned.id <- unlist(pruned, use.names=FALSE)
+    #var.id <- seqGetData(gds, "variant.id")
+    #pruned.sel <- which(var.id %in% pruned.id)
+    
+    # select strata
+    strata <- lapply(c("AFR", "EUR"), function(x) dat$sample.id[dat$Super.Population %in% x])
+    names(strata) <- c("AFR", "EUR")
+    
+    beta <- list(AFR=1.2, EUR=1.2)
+    #geno <- variant_genotypes(gds, variant.sel=pruned.sel)
+    geno <- variant_genotypes(gds, variant.id=pruned.id[1:3])
+    assoc <- variant_assoc_mult(geno[,1,drop=FALSE], strata=strata, beta=beta, varComp=varComp,
+                           dat=dat, outcome="outcome", covars="Population",
+                           cov.mat=blockDiagMatrix1KG)
+    expect_true(all(abs(assoc$Est - assoc$beta) < assoc$Est.SE))
+    expect_equal(assoc$group, c(names(strata), "pooled"))
+    
+    # check fewer samples
+    sm <- lapply(strata, function(x) x[1:200])
+    assoc2 <- variant_assoc_mult(geno[,1,drop=FALSE], strata=sm, beta=beta, varComp=varComp,
+                            dat=dat, outcome="outcome", covars="Population",
+                            cov.mat=blockDiagMatrix1KG)
+    expect_true(all(assoc2$Est < assoc$Est))
+    
+    # rearrange sample.id
+    set.seed(6)
+    dat3 <- dat[sample(nrow(dat)),]
+    assoc3 <- variant_assoc_mult(geno[,1,drop=FALSE], strata=strata, beta=beta, varComp=varComp,
+                            dat=dat3, outcome="outcome", covars="Population",
+                            cov.mat=blockDiagMatrix1KG)
+    expect_equal(assoc3$Est, assoc$Est)
+    
+    # multiple variants
+    #geno <- variant_genotypes(gds, variant.sel=pruned.sel[c(1,100,200)])
+    geno <- variant_genotypes(gds, variant.id=pruned.id[c(1,20,30)])
+    assoc4 <- variant_assoc_mult(geno, strata=strata, beta=beta, varComp=varComp,
+                            dat=dat, outcome="outcome", covars="Population",
+                            cov.mat=blockDiagMatrix1KG)
+    expect_equal(nrow(assoc4), ncol(geno)*(length(strata)+1))
+    
+    seqClose(gds)
+})

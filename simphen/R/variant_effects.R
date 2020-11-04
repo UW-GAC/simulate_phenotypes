@@ -22,13 +22,27 @@ variant_effect <- function(G, h2, beta, varComp) {
         beta <- sqrt((h2*varComp[2])/((1-htot2)*var(G)))
         beta[beta == Inf] <- 0
     } else if (missing(h2)) {
-        h2 <- (var(G)*beta^2) / (var(G)*beta^2 + sum(varComp))
+        h2 <- heritability(G, beta, varComp)
     } else {
         stop("h2 or beta must be specified")
     }
     
     Gbeta <- G * beta
     return(list(h2=h2, beta=beta, Gbeta=Gbeta))
+}
+
+
+#'  Calculate heritability from beta
+#'
+#' @param G genotype vector
+#' @param beta effect size
+#' @param varComp 2-element vector with (genetic, error) variance components
+#' @return h2 (heritability)
+#' @importFrom stats var
+#' @export
+heritability <- function(G, beta, varComp) {
+    h2 <- (var(G)*beta^2) / (var(G)*beta^2 + sum(varComp))
+    return(h2)
 }
 
 
@@ -102,6 +116,94 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
     assoc <- cbind(res, assoc)
 
     return(assoc)
+}
+
+
+#' Run association test for an outcome and a set of variants
+#'
+#' Run association test for an outcome and a set of variants
+#'
+#' Either h2 or beta must be specified.
+#'
+#' @param G genotype matrix with sample.id as rownames and variant.id as colnames
+#' @param strata named list of sample.id in strata
+#' @param h2 heritability
+#' @param beta effect size for variant
+#' @param varComp 2-element vector with (genetic, error) variance components
+#' @param dat AnnotatedDataFrame with sample.id, outcome, and covariates
+#' @param outcome character string specifying the name of the outcome variable in \code{dat}
+#' @param cov.mat covariance matrix with sample.id as rownames
+#' @param covars A vector of character strings specifying the names of the fixed effect covariates in \code{dat}
+#' @param power.signif p-value threshold for significance in power calculations
+#' @return association test results for outcome and variant
+#' @export
+variant_assoc_mult <- function(G, strata, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat, covars=NULL, power.signif=5e-9) {
+    if (!requireNamespace("GENESIS")) {
+        stop("must install GENESIS to use variant_assoc")
+    }
+    
+    if (is.null(h2) & is.null(beta)) stop("one of h2 or beta must be specified")
+    if (!is.list(strata)) stop("strata must be a list") # change this later
+    if (!(setequal(names(strata), names(h2)) | setequal(names(strata), names(beta)))) 
+        stop("h2 or beta must match strata")
+    
+    dat$sample.id <- as.character(dat$sample.id)
+    rownames(dat) <- dat$sample.id
+    
+    if (nrow(dat) < nrow(cov.mat)) {
+        sel <- rownames(cov.mat) %in% dat$sample.id
+        cov.mat <- cov.mat[sel,sel]
+    }
+    
+    variant.id <- colnames(G)
+    if (is.null(variant.id)) variant.id <- 1:ncol(G)
+    res <- list()
+    for (grp in names(strata)) {
+        samp <- as.character(strata[[grp]])
+        N <- length(samp)
+        
+        G.grp <- G[as.character(samp),,drop=FALSE]
+        freq <- 0.5*colMeans(G.grp, na.rm=TRUE)
+        res.grp <- list()
+        for (i in 1:ncol(G.grp)) {
+            if (is.null(h2)) {
+                eff <- variant_effect(G=as.vector(G.grp[,i]), beta=beta[[grp]], varComp=varComp)
+            } else {
+                eff <- variant_effect(G=as.vector(G.grp[,i]), h2=h2[[grp]], varComp=varComp)
+            }
+            
+            tmp <- pData(dat)
+            tmp[samp, outcome] <- tmp[samp, outcome] + eff$Gbeta
+            pData(dat) <- tmp
+            res.grp[[i]] <- list(group=grp, N=N, beta=eff$beta, h2=eff$h2, power=power(N, eff$h2, pval=power.signif))
+        }
+        res.grp <- as.data.frame(data.table::rbindlist(res.grp))
+        
+        nullmod <- GENESIS::fitNullModel(dat, outcome=outcome, covars=covars, cov.mat=cov.mat, 
+                                         sample.id=samp, start=varComp, verbose=FALSE)
+        assoc <- GENESIS:::testGenoSingleVar(nullmod, G[as.character(nullmod$sample.id),])
+        res[[grp]] <- cbind(variant.id, res.grp, freq, assoc, stringsAsFactors=FALSE)
+    }
+    
+    if (length(strata) > 1) {
+        grp <- "pooled"
+        samp <- as.character(unlist(strata))
+        N <- length(samp)
+        G.grp <- G[as.character(samp),,drop=FALSE]
+        freq <- 0.5*colMeans(G.grp, na.rm=TRUE)
+        beta.pooled <- sum(sapply(names(strata), function(grp) length(strata[[grp]])*beta[[grp]])) / N
+        h2.pooled <- apply(G.grp, 2, heritability, beta.pooled, varComp)
+        power.pooled <- power(N, h2.pooled, pval=power.signif)
+        res.grp <- list(group=grp, N=N, beta=beta.pooled, h2=h2.pooled, power=power.pooled)
+        
+        nullmod <- GENESIS::fitNullModel(dat, outcome=outcome, covars=covars, cov.mat=cov.mat, 
+                                         sample.id=samp, start=varComp, verbose=FALSE)
+        assoc <- GENESIS:::testGenoSingleVar(nullmod, G[as.character(nullmod$sample.id),])
+        res[[grp]] <- cbind(variant.id, res.grp, freq, assoc, stringsAsFactors=FALSE)
+    }
+    
+    res <- as.data.frame(data.table::rbindlist(res))
+    return(res)
 }
 
 
