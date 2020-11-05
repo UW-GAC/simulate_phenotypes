@@ -3,13 +3,19 @@ title: "variant selection"
 output: html_notebook
 ---
 
+```{r, eval=FALSE}
+# get latest package versions
+remotes::install_github("smgogarten/SeqVarTools", upgrade=FALSE)
+remotes::install_github("UW-GAC/GENESIS", upgrade=FALSE)
+```
+
 ```{r}
 library(dplyr)
 library(ggplot2)
 #remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
 remotes::install_local("/sbgenomics/workspace/simulate_phenotypes/simphen", upgrade=FALSE)
 library(simphen)
-#devtools::load_all("/sbgenomics/workspace/simulate_phenotypes/simphen")
+#devtools::load_all("/sbgenomics/workspace/simulate_phenotypes/simphen")≈
 ```
 
 Frequency of variants in chromosome 1 in AfrAm and EurAm strata
@@ -116,11 +122,13 @@ dat <- dplyr::left_join(dat, pcs)
 dat <- Biobase::AnnotatedDataFrame(dat)
 ```
 
-get variant effect
+get variant effect - test with subset of samples
 
 ```{r}
-v1 <- variant_assoc(variant.sel=same_freq$variant.sel[1], h2=0.001, varComp=c(3,7),
-                    gdsobj=gds, dat=dat, outcome="outcome", cov.mat=covmat, 
-                    covars=paste0("PC", 1:11))
+geno <- variant_genotypes(gds, variant.sel=same_freq$variant.sel[1])
+strata <- list(afr=samples.afr[1:1000], eur=samples.eur[1:1000])
+v1 <- variant_assoc(geno, h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
+                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    strata=strata, covars=paste0("PC", 1:11))
 v1
 ```
