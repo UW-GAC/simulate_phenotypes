@@ -26,6 +26,8 @@ freq <- rename(afr, freq.afr=alt.freq) %>%
 nrow(freq)
 
 rm(afr, eur) # save memory
+
+saveRDS(freq, file="/sbgenomics/output-files/freeze8_allele_freq_chr1_AfrAm_EurAm.rds")
 ```
 
 Select observed variants
@@ -116,11 +118,51 @@ dat <- dplyr::left_join(dat, pcs)
 dat <- Biobase::AnnotatedDataFrame(dat)
 ```
 
-get variant effect
+get variant effect - test with subset of samples
 
 ```{r}
-v1 <- variant_assoc(variant.sel=same_freq$variant.sel[1], h2=0.001, varComp=c(3,7),
-                    gdsobj=gds, dat=dat, outcome="outcome", cov.mat=covmat, 
-                    covars=paste0("PC", 1:11))
+geno <- variant_genotypes(gds, variant.sel=same_freq$variant.sel[1])
+strata <- list(afr=samples.afr[1:1000], eur=samples.eur[1:1000])
+v1 <- variant_assoc(geno, h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
+                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    strata=strata, covars=paste0("PC", 1:11))
 v1
+```
+
+Use LD prining to select independent variants. Prune first in pooled sample with MAF threshold 0.01, then in each population separately with no threshold.
+
+```{r}
+seqSetFilter(gds, verbose=FALSE)
+strata <- list(afr=samples.afr, eur=samples.eur)
+
+library(SNPRelate)
+
+set.seed(7)
+pruned.all <- snpgdsLDpruning(gds, sample.id=unlist(strata), snp.id=same_freq$variant.id,
+                              maf=0.01, method="corr", 
+                              slide.max.bp=10e6, ld.threshold=sqrt(0.1))
+pruned.all <- unlist(pruned.all, use.names=FALSE)
+
+set.seed(71)
+pruned.afr <- snpgdsLDpruning(gds, sample.id=samples.afr, snp.id=pruned.all,
+                              remove.monosnp=FALSE, method="corr",  
+                              slide.max.bp=10e6, ld.threshold=sqrt(0.1))
+pruned.afr <- unlist(pruned.afr, use.names=FALSE)
+
+set.seed(72)
+pruned.eur <- snpgdsLDpruning(gds, sample.id=samples.eur, snp.id=pruned.afr,
+                              remove.monosnp=FALSE, method="corr",  
+                              slide.max.bp=10e6, ld.threshold=sqrt(0.1))
+pruned <- unlist(pruned.eur, use.names=FALSE)
+length(pruned)
+```
+
+Add effects of first 10 pruned genotypes to outcome
+
+```{r}
+geno <- variant_genotypes(gds, variant.id=pruned[1:10])
+v2 <- variant_assoc(geno, h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
+                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    strata=strata, covars=paste0("PC", 1:11))
+v2
 ```
