@@ -155,14 +155,43 @@ pruned.eur <- snpgdsLDpruning(gds, sample.id=samples.eur, snp.id=pruned.afr,
                               slide.max.bp=10e6, ld.threshold=sqrt(0.1))
 pruned <- unlist(pruned.eur, use.names=FALSE)
 length(pruned)
+
+saveRDS(pruned, file="/sbgenomics/output-files/freeze8_same_freq_pruned_afr_eur_v1.rds")
 ```
 
 Add effects of first 10 pruned genotypes to outcome
 
 ```{r}
+pruned <- readRDS("/sbgenomics/output-files/freeze8_same_freq_pruned_afr_eur_v1.rds")
 geno <- variant_genotypes(gds, variant.id=pruned[1:10])
 v2 <- variant_assoc(geno, h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
                     dat=dat, outcome="outcome", cov.mat=covmat, 
                     strata=strata, covars=paste0("PC", 1:11))
 v2
+saveRDS(v2, file="/sbgenomics/output-files/samefreq_assoc_test_10pruned_2020-11-13.rds")
+```
+
+Test some variants individually and compare
+
+```{r}
+v2.1.indiv <- variant_assoc(geno[,1,drop=FALSE], h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
+                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    strata=strata, covars=paste0("PC", 1:11))
+v2.5.indiv <- variant_assoc(geno[,5,drop=FALSE], h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
+                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    strata=strata, covars=paste0("PC", 1:11))
+v2.10.indiv <- variant_assoc(geno[,10,drop=FALSE], h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
+                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    strata=strata, covars=paste0("PC", 1:11))
+
+v2.indiv <- as.data.frame(data.table::rbindlist(list(v2.1.indiv, v2.5.indiv, v2.10.indiv)))
+saveRDS(v2.indiv, file="/sbgenomics/output-files/samefreq_assoc_test_10pruned_indiv_2020-11-13.rds")
+```
+
+```{r}
+chk <- inner_join(select(v2, variant.id, group, Est.comb=Est),
+           select(v2.indiv, variant.id, group, Est.indiv=Est)) %>%
+  mutate(diff=Est.comb-Est.indiv)
+chk
+saveRDS(chk, file="/sbgenomics/output-files/samefreq_assoc_test_10pruned_indiv_comb_diff_2020-11-13.rds")
 ```
