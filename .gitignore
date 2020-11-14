@@ -3,3 +3,5 @@
 *.Rcheck
 *.tar.gz
 *.RData
+*.rds
+
