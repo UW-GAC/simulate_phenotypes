@@ -17,8 +17,8 @@ argp <- add_argument(argp, "--out_file", help="out file")
 argv <- parse_args(argp)
 print(argv)
 
-#library(doParallel)
-#library(parallel)
+library(doParallel)
+library(parallel)
 library(foreach)
 library(SeqArray)
 library(Biobase)
@@ -54,11 +54,6 @@ nvar <- length(variant.id)
 
 varComp <- c(argv$varComp1, argv$varComp2)
 
-## testing only
-#load("test_variant_effects_data.RData")
-#argv$beta <- c(1.3, 1.2)
-##
-
 # match beta/h2 to strata
 if (!is.na(argv$h2)) {
     h2 <- setNames(as.numeric(argv$h2), names(strata))
@@ -76,8 +71,7 @@ seqClose(gds)
 n_iter <- ceiling(nvar / argv$variant_block_size)
 var_blocks <- unname(split(variant.id, cut(1:nvar, n_iter)))
 
-#eff <- foreach::foreach(i = 1:n_iter) %dopar% {
-eff <- foreach::foreach(i = 1:n_iter) %do% {
+eff <- foreach::foreach(i = 1:n_iter) %dopar% {
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
     var_ind <- as.character(var_blocks[[i]])
     if (!is.na(argv$h2)) {
