@@ -1,12 +1,4 @@
 library(argparser)
-library(doParallel)
-library(parallel)
-library(foreach)
-
-library(SeqArray)
-library(Biobase)
-remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
-library(simphen)
 
 argp <- arg_parser("test variant effects")
 argp <- add_argument(argp, "--gds_file", help="GDS file")
@@ -15,14 +7,24 @@ argp <- add_argument(argp, "--covar_file", help="RDS file with AnnotatedDataFram
 argp <- add_argument(argp, "--outcome_file", help="RDS file with random outcomes")
 argp <- add_argument(argp, "--strata_file", help="RDS file with list of sample.id")
 argp <- add_argument(argp, "--variant_file", help="RDS file with list of variant.id")
-argp <- add_argument(argp, "--h2", help="heritability for each stratum", type="numeric", nargs=Inf)
-argp <- add_argument(argp, "--beta", help="beta for each stratum", type="numeric", nargs=Inf)
+argp <- add_argument(argp, "--h2", help="heritability for each stratum", nargs=Inf)
+argp <- add_argument(argp, "--beta", help="beta for each stratum", nargs=Inf)
 argp <- add_argument(argp, "--varComp1", help="variance component 1", type="integer")
 argp <- add_argument(argp, "--varComp2", help="variance component 2", type="integer")
 argp <- add_argument(argp, "--num_variants", help="number of variants to test", type="integer")
-argp <- add_argument(argp, "--variant_block_size", help="number of variants to add to each outcome at the same time", type="integer")
+argp <- add_argument(argp, "--variant_block_size", help="number of variants to add to each outcome at the same time", type="integer", default=10)
 argp <- add_argument(argp, "--out_file", help="out file")
 argv <- parse_args(argp)
+print(argv)
+
+#library(doParallel)
+#library(parallel)
+library(foreach)
+library(SeqArray)
+library(Biobase)
+remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
+library(simphen)
+sessionInfo()
 
 # Detect the number of available cores and create cluster
 cl <- parallel::makeCluster(detectCores())
@@ -45,7 +47,10 @@ strata <- readRDS(argv$strata_file)
 
 # load variant ids and sample
 variant.id <- readRDS(argv$variant_file)
-var.sel <- variant.id[sort(sample(1:argv$num_variants))]
+if (!is.na(argv$num_variants)) {
+    variant.id <- variant.id[sort(sample(1:argv$num_variants))]
+}
+nvar <- length(variant.id)
 
 varComp <- c(argv$varComp1, argv$varComp2)
 
@@ -55,26 +60,27 @@ varComp <- c(argv$varComp1, argv$varComp2)
 ##
 
 # match beta/h2 to strata
-if (!is.null(argv$h2)) {
-    h2 <- setNames(argv$h2, names(strata))
+if (!is.na(argv$h2)) {
+    h2 <- setNames(as.numeric(argv$h2), names(strata))
 } else if (!is.null(argv$beta)) {
-    beta <- setNames(argv$beta, names(strata))
+    beta <- setNames(as.numeric(argv$beta), names(strata))
 } else {
     stop("must specify either h2 or beta")
 }
 
 # read genotypes
 gds <- seqOpen(argv$gds_file)
-geno <- variant_genotypes(gds, variant.id=var.sel, sample.id=unlist(strata))
+geno <- variant_genotypes(gds, variant.id=variant.id, sample.id=unlist(strata))
 seqClose(gds)
 
-n_iter <- ceiling(argv$num_variants / argv$variant_block_size)
-var_blocks <- unname(split(var.sel, cut(1:length(var.sel), n_iter)))
+n_iter <- ceiling(nvar / argv$variant_block_size)
+var_blocks <- unname(split(variant.id, cut(1:nvar, n_iter)))
 
-eff <- foreach::foreach(i = 1:n_iter) %dopar% {
+#eff <- foreach::foreach(i = 1:n_iter) %dopar% {
+eff <- foreach::foreach(i = 1:n_iter) %do% {
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
     var_ind <- as.character(var_blocks[[i]])
-    if (!is.null(argv$h2)) {
+    if (!is.na(argv$h2)) {
         variant_assoc(geno[,var_ind,drop=FALSE], h2=h2, varComp=varComp,
                     dat=dat, outcome="outcome", cov.mat=covmat, 
                     strata=strata, covars=covars)
