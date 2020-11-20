@@ -11,8 +11,8 @@ argp <- add_argument(argp, "--h2", help="heritability for each stratum", nargs=I
 argp <- add_argument(argp, "--beta", help="beta for each stratum", nargs=Inf)
 argp <- add_argument(argp, "--varComp1", help="variance component 1", type="integer")
 argp <- add_argument(argp, "--varComp2", help="variance component 2", type="integer")
-argp <- add_argument(argp, "--num_variants", help="number of variants to test", type="integer")
-argp <- add_argument(argp, "--variant_block_size", help="number of variants to add to each outcome at the same time", type="integer", default=10)
+argp <- add_argument(argp, "--num_variants", help="number of variants to test")
+argp <- add_argument(argp, "--variant_block_size", help="number of variants to add to each outcome at the same time", default=10L)
 argp <- add_argument(argp, "--out_file", help="out file")
 argv <- parse_args(argp)
 print(argv)
@@ -48,7 +48,7 @@ strata <- readRDS(argv$strata_file)
 # load variant ids and sample
 variant.id <- readRDS(argv$variant_file)
 if (!is.na(argv$num_variants)) {
-    variant.id <- variant.id[sort(sample(1:argv$num_variants))]
+    variant.id <- variant.id[sort(sample(1:as.integer(argv$num_variants)))]
 }
 nvar <- length(variant.id)
 
