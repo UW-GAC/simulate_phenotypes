@@ -17,8 +17,8 @@ argp <- add_argument(argp, "--out_file", help="out file")
 argv <- parse_args(argp)
 print(argv)
 
-library(doParallel)
-library(parallel)
+#library(doParallel)
+#library(parallel)
 library(foreach)
 library(SeqArray)
 library(Biobase)
@@ -27,10 +27,10 @@ library(simphen)
 sessionInfo()
 
 # Detect the number of available cores and create cluster
-cl <- parallel::makeCluster(detectCores())
+#cl <- parallel::makeCluster(detectCores())
 
 # Activate cluster for foreach library
-doParallel::registerDoParallel(cl)
+#doParallel::registerDoParallel(cl)
 
 # load outcomes
 outcomes <- readRDS(argv$outcome_file)
@@ -71,7 +71,8 @@ seqClose(gds)
 n_iter <- ceiling(nvar / argv$variant_block_size)
 var_blocks <- unname(split(variant.id, cut(1:nvar, n_iter)))
 
-eff <- foreach::foreach(i = 1:n_iter) %dopar% {
+#eff <- foreach::foreach(i = 1:n_iter) %dopar% {
+eff <- foreach::foreach(i = 1:n_iter) %do% {
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
     var_ind <- as.character(var_blocks[[i]])
     if (!is.na(argv$h2)) {
@@ -91,4 +92,4 @@ eff.df <- as.data.frame(data.table::rbindlist(eff))
 saveRDS(eff.df, file=argv$out_file)
 
 # Stop cluster to free up resources
-parallel::stopCluster(cl)
+#parallel::stopCluster(cl)
