@@ -76,6 +76,13 @@ test_that("variant_genotypes", {
 })
 
 
+test_that("beta_pooled", {
+    beta <- list(a=1, b=2)
+    strata <- list(a=1:100, b=101:200)
+    expect_equal(.beta_pooled(beta, strata), 1.5)
+})
+
+
 test_that("variant assoc matches iterator method", {
     gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     gdsfile <- system.file("extdata", "1KG_phase3_chr1_SNVsubset.gds", package="simphen")
@@ -133,13 +140,16 @@ test_that("variant assoc", {
     strata <- lapply(c("AFR", "EUR"), function(x) dat$sample.id[dat$Super.Population %in% x])
     names(strata) <- c("AFR", "EUR")
     
-    beta <- list(AFR=1.2, EUR=1.2)
+    beta <- list(AFR=1.2, EUR=1.5)
     geno <- variant_genotypes(gds, variant.id=pruned.id[1:3])
     assoc <- variant_assoc(geno[,1,drop=FALSE], strata=strata, beta=beta, varComp=varComp,
                            dat=dat, outcome="outcome", covars="Population",
                            cov.mat=blockDiagMatrix1KG)
     expect_true(all(abs(assoc$Est - assoc$beta) < assoc$Est.SE))
     expect_equal(assoc$group, c(names(strata), "pooled"))
+    bp <- assoc$beta[assoc$group == "pooled"]
+    expect_true(bp > 1.2)
+    expect_true(bp < 1.5)
     
     # check fewer samples
     sm <- lapply(strata, function(x) x[1:200])

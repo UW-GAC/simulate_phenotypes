@@ -71,6 +71,14 @@ power <- function(N, h2, pval=5e-9) {
 }
 
 
+.beta_pooled <- function(beta, strata) {
+    N <- length(unlist(strata, use.names=FALSE))
+    beta.scaled <- sapply(names(strata), function(grp) {
+        length(strata[[grp]])*beta[[grp]] / N
+    })
+    sum(beta.scaled)
+}
+
 
 #' Run association test for an outcome and a set of variants
 #'
@@ -151,12 +159,12 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
     
     if (length(strata) > 1) {
         grp <- "pooled"
-        samp <- as.character(unlist(strata))
+        samp <- as.character(unlist(strata, use.names=FALSE))
         N <- length(samp)
         G.grp <- G[as.character(samp),,drop=FALSE]
         freq <- 0.5*colMeans(G.grp, na.rm=TRUE)
         if (is.null(beta)) beta <- lapply(res, function(x) x$beta)
-        beta.pooled <- sum(sapply(names(strata), function(grp) length(strata[[grp]])*beta[[grp]])) / N
+        beta.pooled <- .beta_pooled(beta, strata)
         h2.pooled <- apply(G.grp, 2, heritability, beta.pooled, varComp)
         power.pooled <- power(N, h2.pooled, pval=power.signif)
         res.grp <- list(group=grp, N=N, beta=beta.pooled, h2=h2.pooled, power=power.pooled)
