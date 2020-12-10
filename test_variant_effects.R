@@ -19,7 +19,8 @@ print(argv)
 
 #library(doParallel)
 #library(parallel)
-library(foreach)
+library(BiocParallel)
+#library(foreach)
 library(SeqArray)
 library(Biobase)
 remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
@@ -27,6 +28,7 @@ library(simphen)
 sessionInfo()
 
 # Detect the number of available cores and create cluster
+multicoreParam <- MulticoreParam()
 #cl <- parallel::makeCluster(detectCores())
 
 # Activate cluster for foreach library
@@ -72,9 +74,11 @@ n_iter <- ceiling(nvar / argv$variant_block_size)
 var_blocks <- unname(split(variant.id, cut(1:nvar, n_iter)))
 
 #eff <- foreach::foreach(i = 1:n_iter) %dopar% {
-eff <- foreach::foreach(i = 1:n_iter) %do% {
+#eff <- foreach::foreach(i = 1:n_iter) %do% {
+eff <- bplapply(var_blocks, function(x) {
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
-    var_ind <- as.character(var_blocks[[i]])
+    #var_ind <- as.character(var_blocks[[i]])
+    var_ind <- as.character(x)
     if (!is.na(argv$h2)) {
         variant_assoc(geno[,var_ind,drop=FALSE], h2=h2, varComp=varComp,
                     dat=dat, outcome="outcome", cov.mat=covmat, 
@@ -84,7 +88,7 @@ eff <- foreach::foreach(i = 1:n_iter) %do% {
                       dat=dat, outcome="outcome", cov.mat=covmat, 
                       strata=strata, covars=covars)
     }
-}
+})
 
 eff.df <- as.data.frame(data.table::rbindlist(eff))
 
