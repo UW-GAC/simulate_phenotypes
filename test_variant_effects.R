@@ -13,6 +13,7 @@ argp <- add_argument(argp, "--varComp1", help="variance component 1", type="inte
 argp <- add_argument(argp, "--varComp2", help="variance component 2", type="integer")
 argp <- add_argument(argp, "--num_variants", help="number of variants to test")
 argp <- add_argument(argp, "--variant_block_size", help="number of variants to add to each outcome at the same time", default=10L)
+argp <- add_argument(argp, "--num_cores", help="number of cores for parallel computing", default=1L)
 argp <- add_argument(argp, "--out_file", help="out file")
 argv <- parse_args(argp)
 print(argv)
@@ -25,7 +26,7 @@ library(simphen)
 sessionInfo()
 
 # set up parallel environment
-(multicoreParam <- MulticoreParam())
+(multicoreParam <- MulticoreParam(workers=argv$num_cores))
 
 # load outcomes
 outcomes <- readRDS(argv$outcome_file)
