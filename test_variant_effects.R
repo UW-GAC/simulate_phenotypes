@@ -51,7 +51,7 @@ nvar <- length(variant.id)
 varComp <- c(argv$varComp1, argv$varComp2)
 
 # match beta/h2 to strata
-if (!is.na(argv$h2)) {
+if (!is.na(argv$h2[1])) {
     h2 <- setNames(as.numeric(argv$h2), names(strata))
 } else if (!is.null(argv$beta)) {
     beta <- setNames(as.numeric(argv$beta), names(strata))
@@ -65,7 +65,11 @@ geno <- variant_genotypes(gds, variant.id=variant.id, sample.id=unlist(strata))
 seqClose(gds)
 
 n_iter <- ceiling(nvar / argv$variant_block_size)
-var_blocks <- unname(split(variant.id, cut(1:nvar, n_iter)))
+if (n_iter > 1) {
+    var_blocks <- unname(split(variant.id, cut(1:nvar, n_iter)))
+} else {
+    var_blocks <- list(variant.id)
+}
 
 eff <- bplapply(var_blocks, function(x) {
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
