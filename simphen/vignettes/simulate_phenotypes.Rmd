@@ -92,7 +92,7 @@ Test association
 ```{r}
 dat <- annot
 dat$outcome <- outcome.eff
-nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG, 
+nullmod <- fitNullModel(dat, outcome="outcome", cov.mat=blockDiagMatrix1KG,
                         covars="Population", verbose=FALSE)
 seqData <- SeqVarData(gds, sampleData=dat)
 iterator <- SeqVarBlockIterator(seqData, verbose=FALSE)
@@ -113,10 +113,10 @@ Convenience function to add effect by strata and test in one step. We will consi
 
 ```{r}
 dat$outcome <- outcome.gdsord
-geno <- variant_genotypes(gds, variant.sel=var_afr[1])
 strata2 <- strata[c("AFR", "EUR")]
+geno <- variant_genotypes(gds, variant.sel=var_afr[1], sample.id=unlist(strata2))
 beta <- list(AFR=1.33, EUR=1.33)
-variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome", 
+variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
               cov.mat=blockDiagMatrix1KG, strata=strata2, covars="Population")
 ```
 
@@ -124,9 +124,9 @@ variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
 ## Add an effect common in both strata - specify effect size
 
 ```{r}
-geno <- variant_genotypes(gds, variant.sel=var_both[4])
+geno <- variant_genotypes(gds, variant.sel=var_both[4], sample.id=unlist(strata2))
 beta <- list(AFR=1.3, EUR=1.3)
-variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome", 
+variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
               cov.mat=blockDiagMatrix1KG, strata=strata2, covars="Population")
 ```
 
@@ -134,9 +134,9 @@ variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
 ## Add an effect different across strata
 
 ```{r}
-geno <- variant_genotypes(gds, variant.sel=var_both[4])
+geno <- variant_genotypes(gds, variant.sel=var_both[4], sample.id=unlist(strata2))
 beta <- list(AFR=1.5, EUR=1.3)
-variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome", 
+variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
               cov.mat=blockDiagMatrix1KG, strata=strata2, covars="Population")
 ```
 
@@ -160,7 +160,7 @@ Add effects from first 5 pruned variants
 ```{r}
 geno <- variant_genotypes(gds, variant.id=pruned[1:5], sample.id=unlist(strata2))
 beta <- list(AFR=1.2, EUR=1.1)
-variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome", 
+variant_assoc(geno, beta=beta, varComp=varComp, dat=dat, outcome="outcome",
               cov.mat=blockDiagMatrix1KG, strata=strata2, covars="Population")
 ```
 
