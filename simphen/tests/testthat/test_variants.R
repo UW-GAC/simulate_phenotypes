@@ -39,7 +39,9 @@ test_that("variant selection", {
     gds <- seqOpen(gdsfile)
     
     af <- do.call(cbind, lapply(c("EAS_AF", "EUR_AF", "AFR_AF", "AMR_AF", "SAS_AF"), function(x) {
-        seqGetData(gds, paste0("annotation/info/", x))$data
+        tmp <- seqGetData(gds, paste0("annotation/info/", x))
+        if ("data" %in% names(tmp)) tmp <- tmp$data
+        tmp
     }))
     colnames(af) <- c("EAS", "EUR", "AFR", "AMR", "SAS")
 
@@ -77,9 +79,12 @@ test_that("variant_genotypes", {
 
 
 test_that("beta_pooled", {
-    beta <- list(a=1, b=2)
     strata <- list(a=1:100, b=101:200)
+    beta <- list(a=1, b=2)
     expect_equal(.beta_pooled(beta, strata), 1.5)
+    
+    beta <- list(a=c(1,1), b=c(2,3))
+    expect_equal(.beta_pooled(beta, strata), c(1.5, 2))
 })
 
 
