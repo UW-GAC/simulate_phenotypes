@@ -18,15 +18,22 @@ argp <- add_argument(argp, "--out_file", help="out file")
 argv <- parse_args(argp)
 print(argv)
 
-library(BiocParallel)
+#library(BiocParallel)
+library(foreach)
 library(SeqArray)
 library(Biobase)
 remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
+#remotes::install_local("/Users/stephanie/fellowship/simulate_phenotypes/simphen", upgrade=FALSE)
 library(simphen)
 sessionInfo()
 
-# set up parallel environment
-(multicoreParam <- MulticoreParam(workers=argv$num_cores))
+# # set up parallel environment
+# if (argv$num_cores > 1) {
+#     param <- MulticoreParam(workers=argv$num_cores)
+# } else {
+#     param <- SerialParam()
+# }
+# param
 
 # load outcomes
 outcomes <- readRDS(argv$outcome_file)
@@ -71,9 +78,11 @@ if (n_iter > 1) {
     var_blocks <- list(variant.id)
 }
 
-eff <- bplapply(var_blocks, function(x) {
+#eff <- bplapply(var_blocks, function(x) {
+eff <- foreach::foreach(i = 1:n_iter) %do% {
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
-    var_ind <- as.character(x)
+    #var_ind <- as.character(x)
+    var_ind <- as.character(var_blocks[[i]])
     if (!is.na(argv$h2)) {
         variant_assoc(geno[,var_ind,drop=FALSE], h2=h2, varComp=varComp,
                     dat=dat, outcome="outcome", cov.mat=covmat, 
@@ -83,7 +92,8 @@ eff <- bplapply(var_blocks, function(x) {
                       dat=dat, outcome="outcome", cov.mat=covmat, 
                       strata=strata, covars=covars)
     }
-})
+}
+#})
 
 eff.df <- as.data.frame(data.table::rbindlist(eff))
 
