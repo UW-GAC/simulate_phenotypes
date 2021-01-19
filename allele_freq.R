@@ -1,6 +1,5 @@
 library(argparser)
 library(SeqVarTools)
-library(TopmedPipeline)
 
 argp <- arg_parser("allele frequency")
 argp <- add_argument(argp, "gds.file", help="GDS file")
@@ -12,7 +11,7 @@ argv <- parse_args(argp)
 gds <- seqOpen(argv$gds.file)
 
 if (!is.na(argv$sample.file)) {
-    samp <- getobj(argv$sample.file)
+    samp <- readRDS(argv$sample.file)
     seqSetFilter(gds, sample.id=samp)
 }
 
@@ -22,6 +21,6 @@ alt.freq <- 1-ref.freq
 var.info <- variantInfo(gds, alleles=FALSE)
 
 res <- cbind(var.info, alt.freq)
-save(res, file=argv$out.file)
+saveRDS(res, file=argv$out.file)
 
 seqClose(gds)
