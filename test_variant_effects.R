@@ -59,9 +59,11 @@ varComp <- c(argv$varComp1, argv$varComp2)
 
 # match beta/h2 to strata
 if (!is.na(argv$h2[1])) {
-    h2 <- setNames(as.numeric(argv$h2), names(strata))
+    h2 <- as.list(as.numeric(argv$h2))
+    names(h2) <- names(strata)
 } else if (!is.null(argv$beta)) {
-    beta <- setNames(as.numeric(argv$beta), names(strata))
+    beta <- as.list(as.numeric(argv$beta))
+    names(beta) <- names(strata)
 } else {
     stop("must specify either h2 or beta")
 }
