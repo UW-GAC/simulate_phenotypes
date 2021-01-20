@@ -15,8 +15,8 @@ library(simphen)
 Frequency of variants in chromosome 1 in AfrAm and EurAm strata
 
 ```{r}
-afr <- readRDS("/sbgenomics/project-files/freeze8_allele_freq_chr1_AfrAm.rds")
-eur <- readRDS("/sbgenomics/project-files/freeze8_allele_freq_chr1_EurAm.rds")
+afr <- readRDS("/sbgenomics/project-files/freeze8_AfrAm_allele_freq_chr1.rds")
+eur <- readRDS("/sbgenomics/project-files/freeze8_EurAm_allele_freq_chr1.rds")
 
 all.equal(afr$variant.id, eur$variant.id)
 
@@ -27,7 +27,7 @@ nrow(freq)
 
 rm(afr, eur) # save memory
 
-saveRDS(freq, file="/sbgenomics/output-files/freeze8_allele_freq_chr1_AfrAm_EurAm.rds")
+saveRDS(freq, file="/sbgenomics/output-files/freeze8_AfrAm_EurAm_allele_freq_chr1.rds")
 ```
 
 Select observed variants
@@ -129,7 +129,7 @@ v1 <- variant_assoc(geno, h2=list(afr=0.001, eur=0.001), varComp=c(3,7),
 v1
 ```
 
-Use LD prining to select independent variants. Prune first in pooled sample with MAF threshold 0.01, then in each population separately with no threshold.
+Use LD pruning to select independent variants. Prune first in pooled sample with MAF threshold 0.01, then in each population separately with no threshold.
 
 ```{r}
 seqSetFilter(gds, verbose=FALSE)
