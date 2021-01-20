@@ -12,7 +12,6 @@ print(argv)
 
 library(SeqArray)
 remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
-#remotes::install_local("/Users/stephanie/fellowship/simulate_phenotypes/simphen", upgrade=FALSE)
 library(simphen)
 sessionInfo()
 
@@ -24,7 +23,7 @@ variant.id <- readRDS(argv$variant_file)
 gds <- seqOpen(argv$gds_file)
 
 var.id <- ldprune_strata(gds, strata, variant.id,
-                         maf=argv$maf, ld_threshold=argv$ld_threshold,
+                         maf=argv$maf, ld.threshold=argv$ld_threshold,
                          verbose=TRUE) 
 
 saveRDS(var.id, file=argv$out_file)
