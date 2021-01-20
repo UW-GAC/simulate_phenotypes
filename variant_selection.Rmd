@@ -203,3 +203,44 @@ saveRDS(strata, file="/sbgenomics/output-files/freeze8_strata_afr_eur.rds")
 dat$outcome <- NULL
 saveRDS(dat, file="/sbgenomics/output-files/freeze8_AnnotatedDataFrame_afr_eur_pcs.rds")
 ```
+
+
+Repeat combining afr and eur freq for all chromosomes
+
+```{r}
+for (c in 2:22) {
+  afr <- readRDS(paste0("/sbgenomics/project-files/freeze8_AfrAm_allele_freq_chr", c, ".rds"))
+  eur <- readRDS(paste0("/sbgenomics/project-files/freeze8_EurAm_allele_freq_chr", c, ".rds"))
+
+  stopifnot(all.equal(afr$variant.id, eur$variant.id))
+
+  freq <- rename(afr, freq.afr=alt.freq) %>%
+    bind_cols(select(eur, freq.eur=alt.freq)) %>%
+    filter(freq.afr > 0 | freq.eur > 0) # remove monomorphic
+  print(nrow(freq))
+
+  rm(afr, eur) # save memory
+
+  saveRDS(freq, file=paste0("/sbgenomics/output-files/freeze8_AfrAm_EurAm_allele_freq_chr", c, ".rds"))
+}
+```
+
+
+Repeat selecting variants with same allele freq; same effect size and heritability for all chromosomes
+
+```{r}
+for (c in 1:22) { # include chr1 here since we only saved the pruned list before
+  if (c == 1) {
+    f <- paste0("/sbgenomics/project-files/freeze8_AfrAm_EurAm_allele_freq_chr", c, ".rds")
+  } else {
+    f <- paste0("/sbgenomics/output-files/freeze8_AfrAm_EurAm_allele_freq_chr", c, ".rds")
+  }
+  freq <- readRDS(f)
+  same_freq <- freq %>%
+    filter(freq.afr < 0.5, freq.eur < 0.5,
+           freq.afr > 0.05, freq.eur > 0.05, 
+           abs(freq.afr - freq.eur) < 0.001)
+  print(nrow(same_freq))
+  saveRDS(same_freq, file=paste0("/sbgenomics/output-files/same_freq_afr_eur_v1_chr", c, ".rds"))
+}
+```
