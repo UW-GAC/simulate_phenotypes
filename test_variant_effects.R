@@ -35,6 +35,8 @@ sessionInfo()
 # }
 # param
 
+message("Loading sample data")
+
 # load outcomes
 outcomes <- readRDS(argv$outcome_file)
 
@@ -50,10 +52,12 @@ strata <- readRDS(argv$strata_file)
 
 # load variant ids and sample
 variant.id <- readRDS(argv$variant_file)
+ninit <- length(variant.id)
 if (!is.na(argv$num_variants)) {
     variant.id <- variant.id[sort(sample(1:as.integer(argv$num_variants)))]
 }
 nvar <- length(variant.id)
+message("selected ", nvar, " of ", ninit, " variants")
 
 varComp <- c(argv$varComp1, argv$varComp2)
 
@@ -69,6 +73,7 @@ if (!is.na(argv$h2[1])) {
 }
 
 # read genotypes
+message("Reading genotypes")
 gds <- seqOpen(argv$gds_file)
 geno <- variant_genotypes(gds, variant.id=variant.id, sample.id=unlist(strata))
 seqClose(gds)
@@ -80,8 +85,10 @@ if (n_iter > 1) {
     var_blocks <- list(variant.id)
 }
 
+message("Calculating variant effects")
 #eff <- bplapply(var_blocks, function(x) {
 eff <- foreach::foreach(i = 1:n_iter) %do% {
+    message("variant block ", i, " of ", n_iter)
     dat$outcome <- outcomes[[sample(length(outcomes), 1)]]
     #var_ind <- as.character(x)
     var_ind <- as.character(var_blocks[[i]])
