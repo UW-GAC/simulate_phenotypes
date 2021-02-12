@@ -1,0 +1,207 @@
+---
+title: "Variant effects"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Initial tests
+
+Check that adding effects for multiple variants at once gives similar results to adding them individually. Add 10
+effects for 10 variants at once (comb), then check individual effects for 3 of them (indiv).
+
+```{r}
+comb <- readRDS("../data/samefreq_assoc_test_10pruned_2020-11-13.rds")
+indiv <- readRDS("../data/samefreq_assoc_test_10pruned_indiv_2020-11-13.rds")
+head(comb)
+
+chk <- comb %>%
+    filter(variant.id %in% indiv$variant.id) %>%
+    mutate(test="combined") %>%
+    bind_rows(mutate(indiv, test="indiv"))
+
+ggplot(chk, aes(test, Est, group=group, color=group)) +
+    geom_point(position=position_dodge(width=1)) + 
+    geom_errorbar(aes(ymax=Est+Est.SE, ymin=Est-Est.SE), width=0.1,
+                  position=position_dodge(width=1)) + 
+    facet_wrap(~variant.id, ncol=3)
+```
+
+Add 100 variants in groups of 10 each.
+
+```{r}
+dat <- readRDS("../data/freeze8_same_freq_pruned_afr_eur_v1_effects_100var.rds")
+head(dat)
+```
+
+```{r}
+ggplot(dat, aes(as.integer(variant.id), Est, group=group, color=group)) +
+    geom_point(position=position_dodge(width=1)) + 
+    geom_errorbar(aes(ymax=Est+Est.SE, ymin=Est-Est.SE), width=0.1,
+                  position=position_dodge(width=1)) +
+    theme(axis.text.x = element_blank()) +
+    xlab("variant")
+```
+
+
+```{r}
+ggplot(dat, aes(as.integer(variant.id), Est, color=group)) +
+    geom_point() + 
+    geom_errorbar(aes(ymax=Est+Est.SE, ymin=Est-Est.SE), width=0.1) +
+    facet_wrap(~group, ncol=1) +
+    theme(axis.text.x = element_blank()) +
+    xlab("variant")
+```
+
+
+
+```{r}
+ggplot(dat, aes(as.integer(variant.id), -log10(Score.pval), color=group)) +
+    geom_point() + 
+    facet_wrap(~group, ncol=1) +
+    theme(axis.text.x = element_blank()) +
+    xlab("variant")
+```
+
+
+There was an error in calculating beta.pooled.
+
+```{r}
+strata <- readRDS("../data/freeze8_strata_afr_eur.rds")
+grps <- names(strata)
+tmp <- dat
+for (v in unique(tmp$variant.id)) {
+    beta <- lapply(grps, function(g) tmp[tmp$variant.id == v & tmp$group == g, "beta"])
+    names(beta) <- grps
+    beta.pooled <- simphen:::.beta_pooled(beta, strata)
+    tmp[tmp$variant.id == v & tmp$group == "pooled", "beta"] <- beta.pooled
+}
+# can't get this without genotypes
+tmp[tmp$group == "pooled", c("h2", "power")] <- NA
+
+tail(tmp)
+
+saveRDS(tmp, file="../data/freeze8_same_freq_pruned_afr_eur_v1_effects_100var_corrbeta.rds")
+dat <- tmp
+```
+
+Which of combined vs individual is closer to expected beta?
+
+```{r}
+ggplot(dat, aes(beta, Est, color=group)) +
+    geom_point() + 
+    geom_errorbar(aes(ymax=Est+Est.SE, ymin=Est-Est.SE)) +
+    geom_abline(slope=1, intercept=0) +
+    facet_wrap(~group, ncol=3) +
+    theme(legend.position = "none")
+```
+
+For each group, what fraction of variants reach genome-wide significance?
+
+```{r}
+signif <- 5e-9
+    
+dat %>%
+    group_by(group) %>%
+    summarise(n=n(), emp_power=sum(Score.pval < signif)/n)
+```
+
+Proportion of variants where the strongest signal comes from (afr, eur, pooled).
+Is the strongest signal significant?
+
+```{r}
+dat %>%
+    group_by(variant.id) %>%
+    summarise(strongest.signal=group[which.min(Score.pval)],
+              is.signif=min(Score.pval) < signif) %>%
+    group_by(strongest.signal) %>%
+    summarise(n=n(), n.signif=sum(is.signif))
+
+ids <- dat %>%
+    group_by(variant.id) %>%
+    summarise(strongest.signal=group[which.min(Score.pval)]) %>%
+    filter(strongest.signal == "afr") %>%
+    select(variant.id) %>%
+    left_join(dat)
+ids
+```
+
+
+
+# Full run of variants in one scenario
+
+```{r}
+files <- paste0("../data/same_freq_afr_eur_v1_effects_chr", 1:22, ".rds")
+dat <- lapply(files, readRDS) %>%
+    bind_rows
+head(dat)
+```
+
+Proportion of variants where the strongest signal comes from (afr, eur, pooled).
+
+```{r}
+dat %>%
+    group_by(variant.id) %>%
+    summarise(strongest.signal=group[which.min(Score.pval)]) %>%
+    group_by(strongest.signal) %>%
+    summarise(n=n())
+```
+
+Proportion of variants where the strongest signal comes from (afr, eur, pooled) AND is significant.
+
+```{r}
+dat %>%
+    group_by(variant.id) %>%
+    filter(Score.pval < 5e-9) %>%
+    summarise(strongest.signal=group[which.min(Score.pval)]) %>%
+    group_by(strongest.signal) %>%
+    summarise(n=n())
+```
+
+How often is it significant in one group but not the others?
+
+```{r}
+dat %>%
+    group_by(variant.id, group) %>%
+    summarise(is.signif=min(Score.pval) < 5e-9) %>%
+    pivot_wider(names_from=group, values_from=is.signif) %>% head()
+
+dat %>%
+    group_by(variant.id, group) %>%
+    summarise(is.signif=min(Score.pval) < 5e-9) %>%
+    pivot_wider(names_from=group, values_from=is.signif) %>%   
+    summarise(none.signif=!(afr | eur | pooled),
+              indiv.only=((afr | eur) & !pooled),
+              pooled.only=(!(afr | eur) & pooled),
+              pooled.plus.one=(((afr & !eur) | (!afr & eur)) & pooled),
+              all.signif=(afr & eur & pooled)) %>%
+    select(-variant.id) %>%
+    summarise_all(sum) %>%
+    pivot_longer(everything(), names_to="result", values_to="n")
+
+# x <- list()
+# for (v in unique(dat.signif$variant.id)) {
+#     tmp <- filter(dat.signif, variant.id == v)
+#     for (g in unique(dat.signif$group)) {
+#         tmp
+#         x[[as.character(v)]] <- tibble(variant.id=v, group=g,
+#                                        )
+#     }
+# }
+```
+
+
+
+For each group, what fraction of variants reach genome-wide significance?
+
+```{r}
+signif <- 5e-9
+    
+dat %>%
+    group_by(group) %>%
+    summarise(n=n(), emp_power=sum(Score.pval < signif)/n)
+```
