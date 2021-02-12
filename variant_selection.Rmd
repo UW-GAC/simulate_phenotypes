@@ -244,3 +244,46 @@ for (c in 1:22) { # include chr1 here since we only saved the pruned list before
   saveRDS(same_freq, file=paste0("/sbgenomics/output-files/same_freq_afr_eur_v1_chr", c, ".rds"))
 }
 ```
+
+
+
+# Select variants with different frequencies in each population
+
+```{r}
+for (c in 1:22) {
+  freq <- readRDS(paste0("/sbgenomics/project-files/freeze8_allele_freq/freeze8_AfrAm_EurAm_allele_freq_chr", c, ".rds"))
+
+  # Common in Afr, rare in Eur
+  sel <- freq %>%
+    filter(freq.afr < 0.5, freq.eur < 0.05,
+           freq.afr > 0.05, freq.eur > 0.01, 
+           abs(freq.afr - freq.eur) > 0.05)
+  print(nrow(sel))
+  saveRDS(sel, file=paste0("/sbgenomics/output-files/afr_common_eur_rare_v1_chr", c, ".rds"))
+  
+  # Common in Eur, rare in Afr
+  sel <- freq %>%
+    filter(freq.afr < 0.05, freq.eur < 0.5,
+           freq.afr > 0.01, freq.eur > 0.05, 
+           abs(freq.afr - freq.eur) > 0.05)
+  print(nrow(sel))
+  saveRDS(sel, file=paste0("/sbgenomics/output-files/afr_rare_eur_common_v1_chr", c, ".rds"))
+  
+  # Common in Afr, unobs in Eur
+  sel <- freq %>%
+    filter(freq.afr < 0.5, freq.eur < 0.0005,
+           freq.afr > 0.05,
+           abs(freq.afr - freq.eur) > 0.05)
+  print(nrow(sel))
+  saveRDS(sel, file=paste0("/sbgenomics/output-files/afr_common_eur_unobs_v1_chr", c, ".rds"))
+  
+  # Common in Eur, unobs in Afr
+  sel <- freq %>%
+    filter(freq.afr < 0.0005, freq.eur < 0.5,
+           freq.eur > 0.05,
+           abs(freq.afr - freq.eur) > 0.05)
+  print(nrow(sel))
+  saveRDS(sel, file=paste0("/sbgenomics/output-files/afr_unobs_eur_common_v1_chr", c, ".rds"))
+
+}
+```
