@@ -4,9 +4,10 @@ output: html_notebook
 ---
 
 ```{r}
-library(dplyr)
+library(dplyr, warn.conflicts = FALSE)
 library(tidyr)
 library(ggplot2)
+options(dplyr.summarise.inform = FALSE)
 ```
 
 # Initial tests
@@ -205,3 +206,104 @@ dat %>%
     group_by(group) %>%
     summarise(n=n(), emp_power=sum(Score.pval < signif)/n)
 ```
+
+
+
+# Add in more scenarios
+
+```{r}
+dat <- list()
+files <- paste0("../data/same_freq_afr_eur_v1_effects_chr", 1:22, ".rds")
+dat[[1]] <- lapply(files, readRDS) %>%
+    bind_rows %>%
+    mutate(scenario="same_freq_same_eff")
+#tail(dat[[1]])
+
+files <- paste0("../data/same_freq_afr002_eur001_effects_chr", 1:22, ".rds")
+dat[[2]] <- lapply(files, readRDS) %>%
+    bind_rows %>%
+    mutate(scenario="same_freq_afr_larger_eff")
+#tail(dat[[2]])
+
+files <- paste0("../data/same_freq_afr001_eur0015_effects_chr", 1:22, ".rds")
+dat[[3]] <- lapply(files, readRDS) %>%
+    bind_rows %>%
+    mutate(scenario="same_freq_eur_larger_eff")
+#tail(dat[[3]])
+
+files <- paste0("../data/afr_common_b2_eur_rare_b2_effects_chr", 1:22, ".rds")
+dat[[4]] <- lapply(files, readRDS) %>%
+    bind_rows %>%
+    mutate(scenario="afr_common_b2_eur_rare_b2")
+#tail(dat[[4]])
+
+dat <- bind_rows(dat)
+
+#head(dat)
+```
+
+
+Construct 95% confidence intervals and see what fraction of observed values falls within them
+
+```{r}
+signif <- 5e-9
+
+dat.stats <- dat %>%
+    mutate(conf_lower=(Est + qnorm(0.025)*Est.SE),
+           conf_upper=(Est + qnorm(0.975)*Est.SE)) %>%
+    group_by(scenario, group) %>%
+    summarise(n=n(), 
+              emp_power=sum(Score.pval < signif)/n,
+              beta_conf95=sum(beta > conf_lower & beta < conf_upper)/n,
+              sum_sq_diff=sum((Est - beta)^2))
+
+dat.stats
+
+ggplot(dat.stats, aes(group, emp_power, color=scenario, group=scenario)) + 
+    geom_line() + geom_point()
+
+ggplot(dat.stats, aes(group, beta_conf95, color=scenario, group=scenario)) + 
+    geom_line() + geom_point()
+
+ggplot(dat.stats, aes(group, sum_sq_diff, color=scenario, group=scenario)) + 
+    geom_line() + geom_point()
+```
+
+```{r}
+dat.signif <- dat %>%
+    group_by(scenario, variant.id, group) %>%
+    summarise(is.signif=min(Score.pval) < signif) %>% 
+    pivot_wider(names_from=group, values_from=is.signif) %>%
+    summarise(none.signif=!(afr | eur | pooled),
+              indiv.only=((afr | eur) & !pooled),
+              pooled.only=(!(afr | eur) & pooled),
+              pooled.plus.one=(((afr & !eur) | (!afr & eur)) & pooled),
+              all.signif=(afr & eur & pooled)) %>% 
+    select(-variant.id) %>% 
+    summarise(across(everything(), sum)) %>%
+    pivot_longer(-scenario, names_to="result", values_to="n")
+
+dat.signif
+
+ggplot(dat.signif, aes(result, n)) + 
+    geom_bar(stat="identity") +
+    facet_wrap(~scenario) +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+Compare p-values directly
+
+```{r}
+dat.pval <- dat %>%
+    mutate(log10pval=-log10(Score.pval)) %>%
+    select(scenario, variant.id, group, log10pval) %>%
+    pivot_wider(names_from=group, values_from=log10pval) %>%
+    pivot_longer(all_of(c("afr", "eur")), names_to="group", values_to="indiv")
+
+ggplot(dat.pval, aes(indiv, pooled)) +
+    geom_point() +
+    geom_abline(slope=1, intercept=0, color="gray") +
+    facet_grid(group~scenario)
+```
+
+
