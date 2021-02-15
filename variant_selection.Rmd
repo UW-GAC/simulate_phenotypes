@@ -287,3 +287,11 @@ for (c in 1:22) {
 
 }
 ```
+
+No variants (technically only one) in the "common eur, unobs afr category". Delete these files with nothing in them.
+
+```{r}
+for (c in 1:22) {
+  unlink(paste0("/sbgenomics/output-files/afr_unobs_eur_common_v1_chr", c, ".rds"))
+}
+```
