@@ -177,6 +177,8 @@ test_that("variant assoc", {
                             dat=dat, outcome="outcome", covars="Population",
                             cov.mat=blockDiagMatrix1KG)
     expect_equal(nrow(assoc4), ncol(geno)*(length(strata)+1))
+    hp <- assoc4$h2[assoc4$group == "pooled"]
+    expect_true(all(!is.na(hp)))
     
     # use h2
     h2 <- list(AFR=assoc$h2[assoc$group == "AFR"], EUR=assoc$h2[assoc$group == "EUR"])

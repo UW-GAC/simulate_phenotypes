@@ -168,7 +168,11 @@ variant_assoc <- function(G, h2=NULL, beta=NULL, varComp, dat, outcome, cov.mat,
         N <- length(samp)
         G.grp <- G[as.character(samp),,drop=FALSE]
         freq <- 0.5*colMeans(G.grp, na.rm=TRUE)
-        if (is.null(beta)) beta <- lapply(res, function(x) x$beta)
+        if (is.null(beta)) {
+            beta <- lapply(res, function(x) x$beta)
+        } else {
+            beta <- lapply(beta, function(x) rep(x, ncol(G.grp)))
+        }
         beta.pooled <- .beta_pooled(beta, strata)
         h2.pooled <- numeric(ncol(G.grp))
         for (i in 1:ncol(G.grp)) {
