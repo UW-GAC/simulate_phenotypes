@@ -237,6 +237,15 @@ dat[[4]] <- lapply(files, readRDS) %>%
     mutate(scenario="afr_common_b2_eur_rare_b2")
 #tail(dat[[4]])
 
+files <- paste0("../data/afr_common_b2_eur_unobs_b2_effects_chr", 1:22, ".rds")
+dat[[5]] <- lapply(files, readRDS) %>%
+    bind_rows %>%
+    mutate(scenario="afr_common_b2_eur_unobs_b2")
+
+files <- paste0("../data/afr_rare_b2_eur_common_b2_effects_chr", 1:22, ".rds")
+dat[[6]] <- lapply(files, readRDS) %>%
+    bind_rows %>%
+    mutate(scenario="afr_rare_b2_eur_common_b2")
 dat <- bind_rows(dat)
 
 #head(dat)
@@ -300,7 +309,16 @@ dat.pval <- dat %>%
     pivot_wider(names_from=group, values_from=log10pval) %>%
     pivot_longer(all_of(c("afr", "eur")), names_to="group", values_to="indiv")
 
-ggplot(dat.pval, aes(indiv, pooled)) +
+dat.pval %>%
+    filter(grepl("^same_freq", scenario)) %>%
+ggplot(aes(indiv, pooled)) +
+    geom_point() +
+    geom_abline(slope=1, intercept=0, color="gray") +
+    facet_grid(group~scenario)
+
+dat.pval %>%
+    filter(grepl("^afr", scenario)) %>%
+ggplot(aes(indiv, pooled)) +
     geom_point() +
     geom_abline(slope=1, intercept=0, color="gray") +
     facet_grid(group~scenario)
