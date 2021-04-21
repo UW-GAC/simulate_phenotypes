@@ -1,0 +1,112 @@
+---
+title: "Simulation Results"
+output: html_notebook
+---
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+library(tidyr)
+library(ggplot2)
+options(dplyr.summarise.inform = FALSE)
+```
+
+Read in data
+
+```{r}
+data.dir <- "../data"
+pref <- c("afr_common_b2_eur_rare_b2",
+          "afr_common_b2_eur_unobs_b2",
+          "afr_common_h001_eur_rare_h001",
+          "afr_common_h001_eur_unobs_h001",
+          "afr_rare_b2_eur_common_b2",
+          "afr_rare_h001_eur_common_h001",
+          "same_freq_afr001_eur0015",
+          "same_freq_afr002_eur001",
+          "same_freq_afr_eur_v1")
+type <- c("common_rare",
+          "common_unobs",
+          "common_rare",
+          "common_unobs",
+          "rare_common",
+          "rare_common",
+          "same",
+          "same",
+          "same")
+eff <- c("same_beta",
+         "same_beta",
+         "same_h2",
+         "same_h2",
+         "same_beta",
+         "same_h2",
+         "afrh2_>_eurh2",
+         "afrh2_<_eurh2",
+         "same_beta_h2")
+
+names(type) <- pref
+names(eff) <- pref
+
+dat <- lapply(pref, function(p) {
+    lapply(1:22, function(c) {
+        f <- file.path(data.dir, paste0(p, "_effects_chr", c, ".rds"))
+        readRDS(f) %>%
+            mutate("afr_eur_freq"=type[p],
+                   "beta_h2"=eff[p])
+    }) %>% bind_rows()
+}) %>% bind_rows()
+```
+
+
+Construct 95% confidence intervals and see what fraction of observed values falls within them
+
+```{r}
+signif <- 5e-9
+
+dat.stats <- dat %>%
+    mutate(conf_lower=(Est + qnorm(0.025)*Est.SE),
+           conf_upper=(Est + qnorm(0.975)*Est.SE)) %>%
+    group_by(afr_eur_freq, beta_h2, group) %>%
+    summarise(n=n(), 
+              emp_power=sum(Score.pval < signif)/n,
+              beta_conf95=sum(beta > conf_lower & beta < conf_upper)/n,
+              sum_sq_diff=sum((Est - beta)^2))
+
+dat.stats
+
+ggplot(dat.stats, aes(group, emp_power, color=afr_eur_freq, shape=beta_h2,
+                      group=interaction(afr_eur_freq, beta_h2))) + 
+    geom_line() + geom_point()
+
+ggplot(dat.stats, aes(group, beta_conf95, color=afr_eur_freq, shape=beta_h2,
+                      group=interaction(afr_eur_freq, beta_h2))) + 
+    geom_line() + geom_point()
+
+ggplot(dat.stats, aes(group, sum_sq_diff, color=afr_eur_freq, shape=beta_h2,
+                      group=interaction(afr_eur_freq, beta_h2))) + 
+    geom_line() + geom_point()
+```
+
+
+```{r}
+dat.signif <- dat %>%
+    group_by(afr_eur_freq, beta_h2, variant.id, group) %>%
+    summarise(is.signif=min(Score.pval) < signif) %>% 
+    pivot_wider(names_from=group, values_from=is.signif) %>%
+    summarise(none.signif=!(afr | eur | pooled),
+              indiv.only=((afr | eur) & !pooled),
+              pooled.only=(!(afr | eur) & pooled),
+              pooled.plus.one=(((afr & !eur) | (!afr & eur)) & pooled),
+              all.signif=(afr & eur & pooled)) %>% 
+    select(-variant.id) %>% 
+    summarise(across(everything(), sum)) %>%
+    pivot_longer(none.signif:all.signif, names_to="result", values_to="n") %>%
+    mutate(result=factor(result, levels=c("none.signif", "indiv.only", "pooled.only",
+                                          "pooled.plus.one", "all.signif")))
+
+dat.signif
+
+ggplot(dat.signif, aes(result, n)) + 
+    geom_bar(stat="identity") +
+    #facet_grid(beta_h2~afr_eur_freq, scales="free_y") +
+    facet_wrap(afr_eur_freq~beta_h2, scales="free_y") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
