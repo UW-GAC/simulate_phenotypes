@@ -41,8 +41,8 @@ eff <- c("same_beta",
          "same_beta",
          "same_h2",
          "same_beta",
-         "afrh2_>_eurh2",
          "afrh2_<_eurh2",
+         "afrh2_>_eurh2",
          "same_beta_h2")
 
 names(type) <- pref
