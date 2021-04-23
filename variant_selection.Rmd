@@ -337,25 +337,6 @@ for (c in 1:22) {
 ```
 
 
-# Select variants rare in afr and unobserved in eur
-
-```{r}
-for (c in 1:22) {
-  freq <- readRDS(paste0("/sbgenomics/project-files/freeze8_allele_freq/freeze8_AfrAm_EurAm_allele_freq_chr", c, ".rds"))
-
-  # Rare in Afr, unobs in Eur
-  sel <- freq %>%
-    filter(freq.afr < 0.05, freq.eur < 0.0005,
-           freq.afr > 0.01)
-  print(nrow(sel))
-  saveRDS(sel, file=paste0("/sbgenomics/output-files/afr_rare_eur_unobs_v1_chr", c, ".rds"))
-  
-  var <- sel$variant.id
-  saveRDS(var, file=paste0("/sbgenomics/output-files/afr_rare_eur_unobs_v1_variant_id_chr", c, ".rds"))
-}
-```
-
-
 # Select variants unobserved in afr and rare in eur
 
 ```{r}
@@ -372,4 +353,33 @@ for (c in 1:22) {
   var <- sel$variant.id
   saveRDS(var, file=paste0("/sbgenomics/output-files/afr_unobs_eur_rare_v1_variant_id_chr", c, ".rds"))
 }
+```
+
+
+What beta values should we use when the variants are rare?
+
+```{r}
+afr_rare <- lapply(1:22, function(c) {
+  readRDS(paste0("/sbgenomics/project-files/afr_rare_eur_unobs_v1_chr", c, ".rds"))
+}) %>% bind_rows()
+```
+
+```{r}
+(p <- median(afr_rare$freq.afr))
+# assume HWE to get variance of genotype
+varG <- 2*p*(1-p)
+varComp <- c(3,7)
+h2 <- 0.001
+htot2 <- (varComp[1] + h2*varComp[2])/sum(varComp)
+beta <- sqrt((h2*varComp[2])/((1-htot2)*varG))
+beta
+```
+
+higher power in afr:
+
+```{r}
+h2 <- 0.002
+htot2 <- (varComp[1] + h2*varComp[2])/sum(varComp)
+beta <- sqrt((h2*varComp[2])/((1-htot2)*varG))
+beta
 ```
