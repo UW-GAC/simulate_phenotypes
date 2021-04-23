@@ -17,27 +17,30 @@ data.dir <- "../data"
 pref <- c("afr_common_b2_eur_rare_b2",
           "afr_common_b2_eur_unobs_b2",
           "afr_common_h001_eur_rare_h001",
-          "afr_common_h001_eur_unobs_h001",
+          #"afr_common_h001_eur_unobs_h001",
           "afr_rare_b2_eur_common_b2",
           "afr_rare_h001_eur_common_h001",
+          "afr_rare_b2_eur_unobs_b2",
           "same_freq_afr001_eur0015",
           "same_freq_afr002_eur001",
           "same_freq_afr_eur_v1")
 type <- c("common_rare",
           "common_unobs",
           "common_rare",
-          "common_unobs",
+          #"common_unobs",
           "rare_common",
           "rare_common",
+          "rare_unobs",
           "same",
           "same",
           "same")
 eff <- c("same_beta",
          "same_beta",
          "same_h2",
-         "same_h2",
+         #"same_h2",
          "same_beta",
          "same_h2",
+         "same_beta",
          "afrh2_>_eurh2",
          "afrh2_<_eurh2",
          "same_beta_h2")
@@ -74,15 +77,15 @@ dat.stats
 
 ggplot(dat.stats, aes(group, emp_power, color=afr_eur_freq, shape=beta_h2,
                       group=interaction(afr_eur_freq, beta_h2))) + 
-    geom_line() + geom_point()
+    geom_line() + geom_point() + scale_color_brewer(palette="Set1")
 
 ggplot(dat.stats, aes(group, beta_conf95, color=afr_eur_freq, shape=beta_h2,
                       group=interaction(afr_eur_freq, beta_h2))) + 
-    geom_line() + geom_point()
+    geom_line() + geom_point() + scale_color_brewer(palette="Set1")
 
 ggplot(dat.stats, aes(group, sum_sq_diff, color=afr_eur_freq, shape=beta_h2,
                       group=interaction(afr_eur_freq, beta_h2))) + 
-    geom_line() + geom_point()
+    geom_line() + geom_point() + scale_color_brewer(palette="Set1")
 ```
 
 
