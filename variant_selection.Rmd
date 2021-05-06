@@ -383,3 +383,28 @@ htot2 <- (varComp[1] + h2*varComp[2])/sum(varComp)
 beta <- sqrt((h2*varComp[2])/((1-htot2)*varG))
 beta
 ```
+
+Can we make a table of beta, h2, freq, and power for each group?
+
+```{r}
+strata <- readRDS("../data/freeze8_strata_afr_eur.rds")
+N <- lapply(strata, length)
+N$pooled <- N$afr + N$eur
+```
+
+```{r}
+beta <- seq(0.2, 0.7, 0.1)
+freq <- c(0.005, 0.01, 0.02, 0.05, 0.1)
+varComp <- c(3,7)
+x <- lapply(c("afr", "eur", "pooled"), function(group) {
+    lapply(freq, function(p) {
+        lapply(beta, function(b) {
+            varG <- 2*p*(1-p)
+            h2 <- (varG*b^2) / (varG*b^2 + sum(varComp))
+            pow <- power(N[[group]], h2)
+            tibble(group, freq=p, beta=b, h2=h2, power=pow)
+        }) %>% bind_rows()
+    }) %>% bind_rows()
+}) %>% bind_rows()
+write.csv(x, file="../power_stats.txt", quote=F, row.names=F)
+```
