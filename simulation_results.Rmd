@@ -144,20 +144,22 @@ dat.signif <- dat %>%
 
 dat.signif
 
-ggplot(dat.signif, aes(result, n)) + 
+p <- list()
+for (b in unique(dat.signif$effect_size)) {
+p[[b]] <- dat.signif %>%
+        filter(effect_size %in% b) %>%
+ggplot(aes(result, n)) + 
     geom_bar(stat="identity") +
-    facet_wrap(relative_freq~effect_size, scales="free_y") +
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+    facet_wrap(~relative_freq, scales="free_y") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+    ggtitle(paste("effect size:", b, 
+                  "\n panels = relative frequency"))
+}
+
+p
 ```
 
 ```{r}
-# dat.stat <- dat %>%
-#     filter(!is.na(Score.Stat)) %>%
-#     select(relative_freq, effect_size, variant.id, group, Score.Stat) %>%
-#     pivot_wider(names_from=group, values_from=Score.Stat) %>%
-#     pivot_longer(all_of(c("afr", "eur")), names_to="group", values_to="indiv") %>%
-#     filter(!is.na(indiv))
-
 dat.stat <- dat %>%
     filter(!is.na(Score.pval)) %>%
     mutate(log10pval=-log10(Score.pval)) %>%
@@ -168,17 +170,17 @@ dat.stat <- dat %>%
 
 
 p <- list()
-for (g in unique(dat.stat$relative_freq)) {
-p[[g]] <- dat.stat %>%
-        filter(relative_freq %in% g) %>%
+for (b in unique(dat.stat$effect_size)) {
+p[[b]] <- dat.stat %>%
+        filter(effect_size %in% b) %>%
 ggplot(aes(indiv, pooled)) +
     geom_point() +
     geom_abline(slope=1, intercept=0, color="gray") +
     geom_vline(xintercept=-log10(signif), color="red", linetype=2) +
     geom_hline(yintercept=-log10(signif), color="red", linetype=2) +
-    facet_grid(group~effect_size) +
-    ggtitle(paste("relative freq:", g, 
-                  "\n columns = relative effect size",
+    facet_grid(group~relative_freq) +
+    ggtitle(paste("effect size:", b, 
+                  "\n columns = relative frequency",
                   "\n rows = strata"))
 }
 
