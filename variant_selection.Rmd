@@ -408,3 +408,80 @@ x <- lapply(c("afr", "eur", "pooled"), function(group) {
 }) %>% bind_rows()
 write.csv(x, file="../power_stats.txt", quote=F, row.names=F)
 ```
+
+Get median frequency in each group
+
+```{r}
+groups <- c(
+  "same_freq_afr_eur",
+  "afr_unobs_eur_rare",
+  "afr_rare_eur_unobs",
+  "afr_rare_eur_common",
+  "afr_common_eur_unobs"
+)
+variants <- lapply(groups, function(x) {
+  folder <- if (x == "same_freq_afr_eur") "same_freq" else x
+  lapply(1:22, function(c) {
+    readRDS(file.path("/sbgenomics/project-files", folder, paste0(x, "_v1_pruned_chr", c, ".rds")))
+  }) %>% unlist()
+})
+names(variants) <- groups
+```
+
+
+```{r}
+all.var <- unique(unlist(variants, use.names=FALSE))
+freq <- lapply(1:22, function(c) {
+  readRDS(paste0("/sbgenomics/project-files/freeze8_allele_freq/freeze8_AfrAm_EurAm_allele_freq_chr", c, ".rds")) %>%
+    filter(variant.id %in% all.var)
+}) %>% bind_rows()
+```
+
+```{r}
+freq.by.group <- lapply(groups, function(x) {
+  filter(freq, variant.id %in% variants[[x]]) %>%
+    summarise_at(vars(starts_with("freq")), median) %>%
+    mutate(group=x)
+}) %>% bind_rows
+
+freq.by.group
+
+saveRDS(freq.by.group, file="/sbgenomics/output-files/median_freq_by_group.rds")
+```
+
+```{r}
+strata <- readRDS("/sbgenomics/project-files/freeze8_strata_afr_eur.rds")
+N <- lapply(strata, length)
+
+beta <- seq(0.2, 0.7, 0.1)
+varComp <- c(3,7)
+x <- lapply(c("afr", "eur"), function(group) {
+    lapply(freq.by.group[[paste0("freq.", group)]], function(p) {
+        lapply(beta, function(b) {
+            varG <- 2*p*(1-p)
+            h2 <- (varG*b^2) / (varG*b^2 + sum(varComp))
+            pow <- power(N[[group]], h2)
+            tibble(group, freq=p, beta=b, h2=h2, power=pow)
+        }) %>% bind_rows()
+    }) %>% bind_rows()
+}) %>% bind_rows()
+
+saveRDS(x, file="/sbgenomics/output-files/median_freq_beta_power.rds")
+```
+
+What about higher betas for eur rare?
+
+```{r}
+strata <- readRDS("../data/freeze8_strata_afr_eur.rds")
+N <- lapply(strata, length)
+beta <- c(0.8, 0.9, 1)
+varComp <- c(3,7)
+group <- "eur"
+p <- 0.0055
+lapply(beta, function(b) {
+            varG <- 2*p*(1-p)
+            h2 <- (varG*b^2) / (varG*b^2 + sum(varComp))
+            pow <- power(N[[group]], h2)
+            tibble(group, freq=p, beta=b, h2=h2, power=pow)
+        }) %>% bind_rows()
+```
