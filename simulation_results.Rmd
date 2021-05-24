@@ -27,44 +27,22 @@ pref <- c("afr_common_b2_eur_rare_b2",
           "same_freq_afr001_eur0015",
           "same_freq_afr002_eur001",
           "same_freq_afr_eur_v1")
-# type <- c("common_rare",
-#           "common_unobs",
-#           "common_rare",
-#           #"common_unobs",
-#           "rare_common",
-#           "rare_common",
-#           "rare_unobs",
-#           "unobs_rare",
-#           "same",
-#           "same",
-#           "same")
-type <- c("afr > eur > 0.01",
-          "afr > eur ~ 0",
-          "afr > eur > 0.01",
-          "0.01 < afr < eur",
-          "0.01 < afr < eur",
-          "0.05 > afr > eur ~ 0",
-          "0 ~ afr < eur < 0.05",
-          "afr = eur",
-          "afr = eur",
-          "afr = eur")
-type.levels <- c("0 ~ afr < eur < 0.05",
-                 "0.01 < afr < eur",
-                 "afr = eur",
-                 "0.05 > afr > eur ~ 0",
-                 "afr > eur > 0.01",
-                 "afr > eur ~ 0")
-# eff <- c("same_beta",
-#          "same_beta",
-#          "same_h2",
-#          #"same_h2",
-#          "same_beta",
-#          "same_h2",
-#          "same_beta",
-#          "same_beta",
-#          "afrh2_<_eurh2",
-#          "afrh2_>_eurh2",
-#          "same_beta_h2")
+type <- c("afr > 0.05 > eur > 0.01",
+          "afr > 0.05 > eur ~ 0",
+          "afr > 0.05 > eur > 0.01",
+          "0.01 < afr < 0.05 < eur",
+          "0.01 < afr < 0.05 < eur",
+          "0.05 > afr > 0.01 > eur ~ 0",
+          "0 ~ afr < 0.01 < eur < 0.05",
+          "afr = eur > 0.05",
+          "afr = eur > 0.05",
+          "afr = eur > 0.05")
+type.levels <- c("0 ~ afr < 0.01 < eur < 0.05",
+                 "0.01 < afr < 0.05 < eur",
+                 "afr = eur > 0.05",
+                 "0.05 > afr > 0.01 > eur ~ 0",
+                 "afr > 0.05 > eur > 0.01",
+                 "afr > 0.05 > eur ~ 0")
 eff <- c("afr = eur",
          "afr = eur",
          "afr < eur",
@@ -86,14 +64,16 @@ dat <- lapply(pref, function(p) {
     lapply(1:22, function(c) {
         f <- file.path(data.dir, paste0(p, "_effects_chr", c, ".rds"))
         readRDS(f) %>%
-            # mutate("afr_eur_freq"=type[p],
-            #        "beta_h2"=eff[p])
             mutate("relative_freq"=factor(type[p], levels=type.levels),
                    "effect_size"=factor(eff[p], levels=eff.levels))
     }) %>% bind_rows()
 }) %>% bind_rows()
 ```
 
+
+Calculate empirical power (fraction of p-values that are significant).
+
+>  For the empirical power, you basically have a series of `n` bernouli random variables that take the value 1 if you find an association and 0 if you don't find an association, where the parameter `p` is the true power.  you estimate `p` (i.e. the empirical power you already calculated) by taking the average of all the 0s and 1s. The variance of the random variable that is that average is therefore `p(1-p)/n`, so the SE is `sqrt(p(1-p)/n)`. you can then use the usual formula of `p +/- qnorm(0.975)*SE` to get the upper and lower bounds of the 95% CI.
 
 Construct 95% confidence intervals and see what fraction of observed values falls within them
 
@@ -102,45 +82,78 @@ signif <- 5e-9
 
 dat.stats <- dat %>%
     filter(!is.na(Est)) %>% # remove variants with freq=0 in one group
-    mutate(conf_lower=(Est + qnorm(0.025)*Est.SE),
-           conf_upper=(Est + qnorm(0.975)*Est.SE)) %>%
+    mutate(beta_conf_lower=(Est + qnorm(0.025)*Est.SE),
+           beta_conf_upper=(Est + qnorm(0.975)*Est.SE)) %>%
     group_by(relative_freq, effect_size, group) %>%
     summarise(n=n(), 
               emp_power=sum(Score.pval < signif)/n,
-              beta_conf95=sum(beta > conf_lower & beta < conf_upper)/n,
-              sum_sq_diff=sum((Est - beta)^2))
+              beta_conf95=sum(beta > beta_conf_lower & beta < beta_conf_upper)/n,
+              sum_sq_diff=sum((Est - beta)^2)) %>%
+    mutate(power_SE=sqrt(emp_power*(1-emp_power)/n),
+           power_conf_lower=(emp_power + qnorm(0.025)*power_SE),
+           power_conf_upper=(emp_power + qnorm(0.975)*power_SE))
 
 dat.stats
 
-ggplot(dat.stats, aes(group, emp_power, color=relative_freq, shape=effect_size,
-                      group=interaction(relative_freq, effect_size))) + 
-    geom_line() + geom_point() + scale_color_brewer(palette="Set1")
-
-ggplot(dat.stats, aes(group, beta_conf95, color=relative_freq, shape=effect_size,
-                      group=interaction(relative_freq, effect_size))) + 
-    geom_line() + geom_point() + scale_color_brewer(palette="Set1")
-
-# ggplot(dat.stats, aes(group, sum_sq_diff, color=afr_eur_freq, shape=beta_h2,
-#                       group=interaction(afr_eur_freq, beta_h2))) + 
+# ggplot(dat.stats, aes(group, emp_power, color=relative_freq, shape=effect_size,
+#                       group=interaction(relative_freq, effect_size))) + 
 #     geom_line() + geom_point() + scale_color_brewer(palette="Set1")
+# 
+# ggplot(dat.stats, aes(group, beta_conf95, color=relative_freq, shape=effect_size,
+#                       group=interaction(relative_freq, effect_size))) + 
+#     geom_line() + geom_point() + scale_color_brewer(palette="Set1")
+
+p <- list()
+for (b in unique(dat.stats$effect_size)) {
+p[[b]] <- dat.stats %>%
+        filter(effect_size %in% b) %>%
+ggplot(aes(group, emp_power)) + 
+    geom_col() +
+    geom_errorbar(aes(ymin=power_conf_lower, ymax=power_conf_upper), width=0.4) +
+    facet_wrap(~relative_freq, scales="free_y") +
+    ylab("empirical power") +
+    ggtitle(paste("effect size:", b, 
+                  "\n panels = relative frequency"))
+}
+
+p
 ```
 
 
 ```{r}
+# dat.signif <- dat %>%
+#     group_by(relative_freq, effect_size, variant.id, group) %>%
+#     summarise(is.signif=(!is.na(Score.pval) & min(Score.pval) < signif)) %>% 
+#     pivot_wider(names_from=group, values_from=is.signif) %>%
+#     summarise(none.signif=!(afr | eur | pooled),
+#               indiv.only=((afr | eur) & !pooled),
+#               pooled.only=(!(afr | eur) & pooled),
+#               pooled.plus.one=(((afr & !eur) | (!afr & eur)) & pooled),
+#               all.signif=(afr & eur & pooled)) %>% 
+#     select(-variant.id) %>%
+#     summarise(across(everything(), sum)) %>%
+#     pivot_longer(none.signif:all.signif, names_to="result", values_to="n") %>%
+#     mutate(result=factor(result, levels=c("none.signif", "indiv.only", "pooled.only",
+#                                           "pooled.plus.one", "all.signif")))
+
 dat.signif <- dat %>%
     group_by(relative_freq, effect_size, variant.id, group) %>%
     summarise(is.signif=(!is.na(Score.pval) & min(Score.pval) < signif)) %>% 
     pivot_wider(names_from=group, values_from=is.signif) %>%
-    summarise(none.signif=!(afr | eur | pooled),
-              indiv.only=((afr | eur) & !pooled),
-              pooled.only=(!(afr | eur) & pooled),
-              pooled.plus.one=(((afr & !eur) | (!afr & eur)) & pooled),
+    summarise(afr.only=(afr & !eur & !pooled),
+              eur.only=(!afr & eur & !pooled),
+              pooled.only=(!afr & !eur & pooled),
+              pooled.plus.afr=(afr & !eur & pooled),
+              pooled.plus.eur=(!afr & eur & pooled),
               all.signif=(afr & eur & pooled)) %>% 
     select(-variant.id) %>%
     summarise(across(everything(), sum)) %>%
-    pivot_longer(none.signif:all.signif, names_to="result", values_to="n") %>%
-    mutate(result=factor(result, levels=c("none.signif", "indiv.only", "pooled.only",
-                                          "pooled.plus.one", "all.signif")))
+    pivot_longer(afr.only:all.signif, names_to="result", values_to="n") %>%
+    mutate(result=factor(result, levels=c("afr.only", "eur.only", "pooled.only",
+                                          "pooled.plus.afr", "pooled.plus.eur",
+                                          "all.signif"))) %>%
+    group_by(relative_freq, effect_size) %>%
+    mutate(frac_signif=n/sum(n))
 
 dat.signif
 
@@ -148,10 +161,11 @@ p <- list()
 for (b in unique(dat.signif$effect_size)) {
 p[[b]] <- dat.signif %>%
         filter(effect_size %in% b) %>%
-ggplot(aes(result, n)) + 
-    geom_bar(stat="identity") +
+ggplot(aes(result, frac_signif)) + 
+    geom_col() +
     facet_wrap(~relative_freq, scales="free_y") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+    ylab("fraction of signifiant variants") +
     ggtitle(paste("effect size:", b, 
                   "\n panels = relative frequency"))
 }
@@ -169,20 +183,61 @@ dat.stat <- dat %>%
     filter(!is.na(indiv))
 
 
-p <- list()
+p1 <- list()
 for (b in unique(dat.stat$effect_size)) {
-p[[b]] <- dat.stat %>%
+p1[[b]] <- dat.stat %>%
         filter(effect_size %in% b) %>%
 ggplot(aes(indiv, pooled)) +
     geom_point() +
     geom_abline(slope=1, intercept=0, color="gray") +
     geom_vline(xintercept=-log10(signif), color="red", linetype=2) +
     geom_hline(yintercept=-log10(signif), color="red", linetype=2) +
-    facet_grid(group~relative_freq) +
+    facet_grid(group~relative_freq, scales="free") +
     ggtitle(paste("effect size:", b, 
                   "\n columns = relative frequency",
                   "\n rows = strata"))
 }
 
-p
+p1
+
+p2 <- list()
+for (b in unique(dat.stat$effect_size)) {
+    tmp <- filter(dat.stat, effect_size %in% b)
+    for (f in unique(tmp$relative_freq)) {
+p2[[paste(b,f)]] <- tmp %>%
+    filter(relative_freq %in% f) %>%
+ggplot(aes(indiv, pooled)) +
+    geom_point() + coord_fixed() +
+    geom_abline(slope=1, intercept=0, color="gray") +
+    geom_vline(xintercept=-log10(signif), color="red", linetype=2) +
+    geom_hline(yintercept=-log10(signif), color="red", linetype=2) +
+    facet_wrap(~group) +
+    ggtitle(paste("effect size:", b, 
+                  "\nrelative frequency:", f))
+    }
+}
+
+p2
+```
+
+For case where afr analysis was significant but not pooled, look at relative values of freq and beta in the two groups.
+
+```{r}
+chk <- dat %>%
+    filter(relative_freq %in% "0.01 < afr < 0.05 < eur",
+           effect_size %in% "afr > eur") %>%
+    group_by(variant.id, group, beta, freq) %>%
+    summarise(is.signif=(!is.na(Score.pval) & min(Score.pval) < signif)) %>%
+    pivot_wider(names_from=group, values_from=c(beta, freq, is.signif)) %>%
+    mutate(which_signif=ifelse(is.signif_afr & is.signif_pooled, "both",
+                        ifelse(is.signif_afr & !is.signif_pooled, "afr",
+                        ifelse(!is.signif_afr & is.signif_pooled, "pooled",
+                        ifelse(!is.signif_afr & !is.signif_pooled, "none", NA))))) %>%
+    mutate(which_signif=factor(which_signif, levels=c("both", "pooled", "afr", "none")))
+
+ggplot(chk, aes(freq_eur, freq_afr, color=which_signif)) +
+    geom_point(alpha=0.9) + scale_color_brewer(palette="Dark2")
+
+ggplot(chk, aes(beta_eur, beta_afr, color=which_signif)) +
+    geom_point(alpha=0.9) + scale_color_brewer(palette="Dark2")
 ```
