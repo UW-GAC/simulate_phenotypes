@@ -174,7 +174,7 @@ p
 ```
 
 ```{r}
-dat.stat <- dat %>%
+dat.pval <- dat %>%
     filter(!is.na(Score.pval)) %>%
     mutate(log10pval=-log10(Score.pval)) %>%
     select(relative_freq, effect_size, variant.id, group, log10pval) %>%
@@ -184,8 +184,8 @@ dat.stat <- dat %>%
 
 
 p1 <- list()
-for (b in unique(dat.stat$effect_size)) {
-p1[[b]] <- dat.stat %>%
+for (b in unique(dat.pval$effect_size)) {
+p1[[b]] <- dat.pval %>%
         filter(effect_size %in% b) %>%
 ggplot(aes(indiv, pooled)) +
     geom_point() +
@@ -199,45 +199,210 @@ ggplot(aes(indiv, pooled)) +
 }
 
 p1
+```
 
-p2 <- list()
-for (b in unique(dat.stat$effect_size)) {
-    tmp <- filter(dat.stat, effect_size %in% b)
+```{r}
+p.all <- list()
+for (b in unique(dat.pval$effect_size)) {
+    tmp.stats <- filter(dat.stats, effect_size %in% b)
+    tmp.signif <- filter(dat.signif, effect_size %in% b)
+    tmp.pval <- filter(dat.pval, effect_size %in% b)
+    p.tmp <- list()
+    for (f in unique(tmp.stats$relative_freq)) {
+        p.tmp[[1]] <- tmp.stats %>%
+            filter(relative_freq %in% f) %>%
+            ggplot(aes(group, emp_power)) + 
+            geom_col() +
+            geom_errorbar(aes(ymin=power_conf_lower, ymax=power_conf_upper), width=0.4) +
+            ylab("empirical power") +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative freq:", f))
+        
+        p.tmp[[2]] <- tmp.signif %>%
+            filter(relative_freq %in% f) %>%
+            ggplot(aes(result, frac_signif)) + 
+            geom_col() +
+            theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+            ylab("fraction of signifiant variants") +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative freq:", f))
+        
+        p.tmp[[3]] <- tmp.pval %>%
+            filter(relative_freq %in% f) %>%
+            ggplot(aes(indiv, pooled)) +
+            geom_point() + coord_fixed() +
+            geom_abline(slope=1, intercept=0, color="gray") +
+            geom_vline(xintercept=-log10(signif), color="red", linetype=2) +
+            geom_hline(yintercept=-log10(signif), color="red", linetype=2) +
+            facet_wrap(~group) +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative frequency:", f))
+        
+        p.all[[paste(b,f)]] <- p.tmp
+    }
+}
+```
+
+```{r, fig.width=4, fig.height=4}
+lapply(p.all, function(x) x[1:2])
+```
+
+
+```{r, fig.width=7, fig.height=4}
+lapply(p.all, function(x) x[3])
+```
+
+# Estimated vs true beta
+
+```{r}
+i <- 1
+p <- list()
+for (b in unique(dat$effect_size)) {
+    tmp <- filter(dat, effect_size %in% b)
     for (f in unique(tmp$relative_freq)) {
-p2[[paste(b,f)]] <- tmp %>%
-    filter(relative_freq %in% f) %>%
-ggplot(aes(indiv, pooled)) +
-    geom_point() + coord_fixed() +
-    geom_abline(slope=1, intercept=0, color="gray") +
-    geom_vline(xintercept=-log10(signif), color="red", linetype=2) +
-    geom_hline(yintercept=-log10(signif), color="red", linetype=2) +
-    facet_wrap(~group) +
-    ggtitle(paste("effect size:", b, 
-                  "\nrelative frequency:", f))
+        tmp2 <- filter(tmp, relative_freq %in% f) 
+        if (i <= 5) {
+        p[[paste(b,f)]] <- tmp2 %>%
+            ggplot(aes(beta, Est)) + 
+            geom_boxplot() +
+            facet_wrap(~group) +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative freq:", f))
+        } else {
+        p[[paste(b,f)]] <- tmp2 %>%
+            ggplot(aes(beta, Est)) + 
+            geom_point() +
+            geom_abline(slope=1, intercept=0, color="gray") +
+            facet_wrap(~group) +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative freq:", f))
+            
+        }
+        i <- i + 1
     }
 }
 
-p2
+p
 ```
 
-For case where afr analysis was significant but not pooled, look at relative values of freq and beta in the two groups.
+# Compute correlation with PCs
 
 ```{r}
-chk <- dat %>%
-    filter(relative_freq %in% "0.01 < afr < 0.05 < eur",
-           effect_size %in% "afr > eur") %>%
-    group_by(variant.id, group, beta, freq) %>%
-    summarise(is.signif=(!is.na(Score.pval) & min(Score.pval) < signif)) %>%
-    pivot_wider(names_from=group, values_from=c(beta, freq, is.signif)) %>%
-    mutate(which_signif=ifelse(is.signif_afr & is.signif_pooled, "both",
-                        ifelse(is.signif_afr & !is.signif_pooled, "afr",
-                        ifelse(!is.signif_afr & is.signif_pooled, "pooled",
-                        ifelse(!is.signif_afr & !is.signif_pooled, "none", NA))))) %>%
-    mutate(which_signif=factor(which_signif, levels=c("both", "pooled", "afr", "none")))
+# save all the variant.ids
+var.id <- sort(dat$variant.id)
+save(var.id, file="../data/simulation_variant_include_20210610.RData")
+```
 
-ggplot(chk, aes(freq_eur, freq_afr, color=which_signif)) +
-    geom_point(alpha=0.9) + scale_color_brewer(palette="Dark2")
+```{r}
+library(gdsfmt)
+files <- paste0("../data/sim_vars_20210610_pca_corr_chr", 1:22, ".gds")
+corr <- do.call(rbind, lapply(unname(files), function(f) {
+    c <- openfn.gds(f)
+    tmp <- t(read.gdsn(index.gdsn(c, "correlation")))
+    n_pcs <- ncol(tmp)
+    colnames(tmp) <- paste0("PC", 1:n_pcs)
+    tmp <- data.frame(tmp,
+                      variant.id=readex.gdsn(index.gdsn(c, "snp.id")),
+                      chr=readex.gdsn(index.gdsn(c, "chromosome")),
+                      pos=readex.gdsn(index.gdsn(c, "position")),
+                      stringsAsFactors=FALSE)
+    closefn.gds(c)
+    tmp
+}))
+saveRDS(corr, file="../data/sim_vars_20210610_pca_corr.rds")
+```
 
-ggplot(chk, aes(beta_eur, beta_afr, color=which_signif)) +
-    geom_point(alpha=0.9) + scale_color_brewer(palette="Dark2")
+```{r}
+corr <- readRDS("../data/sim_vars_20210610_pca_corr.rds")
+dat.corr <- dat %>%
+    mutate(variant.id=as.integer(variant.id)) %>%
+    left_join(corr) 
+
+p <- list()
+for (b in unique(dat.corr$effect_size)) {
+    tmp <- filter(dat.corr, effect_size %in% b)
+    for (f in unique(tmp$relative_freq)) {
+        p[[paste(b,f)]] <- tmp %>%
+            filter(relative_freq %in% f) %>%
+        ggplot(aes(abs(PC1), Est/beta)) +
+        geom_point() +
+            geom_smooth(method="lm", color="gray") +
+        facet_wrap(~group) +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative freq:", f))
+    }
+}
+
+p
+```
+
+Meta-analysis
+
+```{r}
+meta <- function(beta, var) {
+    W <- 1/var
+    beta.fixed <- rowSums(beta*W, na.rm=T)/rowSums(W, na.rm=T)
+    var.fixed <- 1/rowSums(W, na.rm=T)
+    
+    test.stat <- beta.fixed/sqrt(var.fixed)
+    pval <- 2*pnorm(abs(test.stat), lower.tail = F)
+
+    return(data.frame(beta = beta.fixed, 
+                      var = var.fixed, 
+                      test.stat = test.stat^2, 
+                      pval = pval))
+}
+
+metal <- list()
+for (b in unique(dat$effect_size)) {
+    tmp <- filter(dat, effect_size %in% b)
+    for (f in unique(tmp$relative_freq)) {
+        tmp2 <- filter(tmp, relative_freq %in% f)
+        tmp3 <- tmp2 %>%
+            filter(group != "pooled") %>%
+            select(variant.id, Est, Est.SE, group) %>%
+            pivot_wider(names_from=group, values_from=c(Est, Est.SE))
+        tmp.meta <- meta(beta=tmp3[,c("Est_afr", "Est_eur")], 
+                         var=(tmp3[,c("Est.SE_afr", "Est.SE_eur")])^2)
+        metal[[paste(b, f)]] <- cbind(tmp3, tmp.meta) %>%
+            mutate(effect_size=b, relative_freq=f)
+    }
+}
+meta.df <- bind_rows(metal) %>%
+    mutate(group="meta") %>%
+    mutate(Est.SE=sqrt(var)) %>%
+    rename(Est=beta, Stat=test.stat) %>%
+    select(-ends_with(c("afr", "eur")))
+
+dat.meta <- dat %>%
+    rename(Stat=Score.Stat, pval=Score.pval) %>%
+    bind_rows(meta.df)
+```
+
+
+```{r}
+signif <- 5e-9
+p <- list()
+for (b in unique(dat.meta$effect_size)) {
+    tmp <- filter(dat.meta, effect_size %in% b)
+    for (f in unique(tmp$relative_freq)) {
+        tmp2 <- filter(tmp, relative_freq %in% f)
+        
+        p[[paste(b, f)]] <- tmp2 %>%
+            filter(group %in% c("pooled", "meta")) %>%
+            filter(!is.na(pval)) %>%
+            mutate(log10pval=-log10(pval)) %>%
+            select(variant.id, group, log10pval) %>%
+            pivot_wider(names_from=group, values_from=log10pval) %>%
+            ggplot(aes(meta, pooled)) +
+            geom_point() + coord_fixed() +
+            geom_abline(slope=1, intercept=0, color="gray") +
+            geom_vline(xintercept=-log10(signif), color="red", linetype=2) +
+            geom_hline(yintercept=-log10(signif), color="red", linetype=2) +
+            ggtitle(paste("effect size:", b, 
+                          "\nrelative frequency:", f))
+    }
+}
+
+p
 ```
