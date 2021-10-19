@@ -1,5 +1,5 @@
 version: 1.2
-workflows:
+tools:
    - name: allele_freq
      subclass: CWL
      publish: true
