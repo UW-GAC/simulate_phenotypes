@@ -4,7 +4,14 @@ label: Allele frequency
 doc: This tool calculates allele frequency for variants in a GDS file.
 $namespaces:
   sbg: https://sevenbridges.com
-
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/
+  
+dct:creator:
+  "@id": "http://orcid.org/0000-0002-7231-9745"
+  foaf:name: Stephanie Gogarten
+  foaf:mbox: sdmorris@uw.edu
+  
 requirements:
 - class: ShellCommandRequirement
 - class: ResourceRequirement

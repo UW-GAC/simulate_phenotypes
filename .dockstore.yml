@@ -5,9 +5,4 @@ workflows:
      publish: true
      primaryDescriptorPath: /tools/allele_freq.cwl
      testParameterFiles:
-         - /tools/allele_freq.test.json
-     authors:
-       - name: Stephanie Gogarten
-         orcid: 0000-0002-7231-9745
-         email: sdmorris@uw.edu
-
+         - /tools/test/allele_freq.test.json
