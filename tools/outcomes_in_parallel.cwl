@@ -4,6 +4,13 @@ label: Generate random phenotypes from covariance blocks
 doc: This tool generates random correlated phenotypes based on a block diagonal covariance matrix. Block indices should be computed in advance using the function simphen:::block_indices, and the covariance matrix and block indices should be saved in a single RData object. See https://github.com/UW-GAC/simulate_phenotypes/blob/master/notebooks/generate_outcomes.Rmd for an example.
 $namespaces:
   sbg: https://sevenbridges.com
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/
+  
+dct:creator:
+  "@id": "http://orcid.org/0000-0002-7231-9745"
+  foaf:name: Stephanie Gogarten
+  foaf:mbox: sdmorris@uw.edu
 
 requirements:
 - class: ShellCommandRequirement
