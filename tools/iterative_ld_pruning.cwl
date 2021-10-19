@@ -1,7 +1,7 @@
 cwlVersion: v1.1
 class: CommandLineTool
 label: Iterative LD pruning by group
-doc: This tool 
+doc: This tool does LD pruning iteratively by group, keeping only variants not in LD in any group.
 $namespaces:
   sbg: https://sevenbridges.com
   dct: http://purl.org/dc/terms/
