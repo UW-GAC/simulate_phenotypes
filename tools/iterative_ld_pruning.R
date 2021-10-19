@@ -11,7 +11,7 @@ argv <- parse_args(argp)
 print(argv)
 
 library(SeqArray)
-remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
+#remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
 library(simphen)
 sessionInfo()
 
@@ -24,7 +24,7 @@ gds <- seqOpen(argv$gds_file)
 
 var.id <- ldprune_strata(gds, strata, variant.id,
                          maf=argv$maf, ld.threshold=argv$ld_threshold,
-                         verbose=TRUE) 
+                         verbose=TRUE)
 
 saveRDS(var.id, file=argv$out_file)
 

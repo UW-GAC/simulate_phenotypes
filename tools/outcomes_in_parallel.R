@@ -1,11 +1,8 @@
 library(doParallel)
 library(parallel)
 library(foreach)
-
-install.packages("argparser", repos="https://cloud.r-project.org")
 library(argparser)
-install.packages("remotes", repos="https://cloud.r-project.org")
-remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
+#remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
 
 argp <- arg_parser("generate random outcomes")
 argp <- add_argument(argp, "covmat_file", help="RData file with objects covmat and blocks")

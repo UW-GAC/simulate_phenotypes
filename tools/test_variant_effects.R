@@ -22,8 +22,7 @@ print(argv)
 library(foreach)
 library(SeqArray)
 library(Biobase)
-remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
-#remotes::install_local("/Users/stephanie/fellowship/simulate_phenotypes/simphen", upgrade=FALSE)
+#remotes::install_github("UW-GAC/simulate_phenotypes/simphen", upgrade=FALSE)
 library(simphen)
 sessionInfo()
 
@@ -94,11 +93,11 @@ eff <- foreach::foreach(i = 1:n_iter) %do% {
     var_ind <- as.character(var_blocks[[i]])
     if (!is.na(argv$h2)) {
         variant_assoc(geno[,var_ind,drop=FALSE], h2=h2, varComp=varComp,
-                    dat=dat, outcome="outcome", cov.mat=covmat, 
+                    dat=dat, outcome="outcome", cov.mat=covmat,
                     strata=strata, covars=covars)
     } else {
         variant_assoc(geno[,var_ind,drop=FALSE], beta=beta, varComp=varComp,
-                      dat=dat, outcome="outcome", cov.mat=covmat, 
+                      dat=dat, outcome="outcome", cov.mat=covmat,
                       strata=strata, covars=covars)
     }
 }
