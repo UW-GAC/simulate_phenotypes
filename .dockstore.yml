@@ -18,3 +18,9 @@ workflows:
      primaryDescriptorPath: /tools/iterative_ld_pruning.cwl
      testParameterFiles:
          - /tools/test/iterative_ld_pruning.test.json
+   - name: simulate_variant_effects
+     subclass: CWL
+     publish: true
+     primaryDescriptorPath: /tools/test_variant_effects.cwl
+     testParameterFiles:
+         - /tools/test/test_variant_effects.test.json
