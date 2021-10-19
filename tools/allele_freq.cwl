@@ -67,7 +67,8 @@ outputs:
 stdout: job.out.log
 
 baseCommand:
-- Rscript /usr/local/simulate_phenotypes/tools/allele_freq.R
+- Rscript
+- /usr/local/simulate_phenotypes/tools/allele_freq.R
 
 hints:
 - class: sbg:SaveLogs
