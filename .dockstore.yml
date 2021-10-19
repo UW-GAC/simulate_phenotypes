@@ -11,4 +11,10 @@ workflows:
      publish: true
      primaryDescriptorPath: /tools/outcomes_in_parallel.cwl
      testParameterFiles:
-         - /tools/test/outcomes_in_paralle.test.json
+         - /tools/test/outcomes_in_parallel.test.json
+   - name: iterative_ld_pruning
+     subclass: CWL
+     publish: true
+     primaryDescriptorPath: /tools/iterative_ld_pruning.cwl
+     testParameterFiles:
+         - /tools/test/iterative_ld_pruning.test.json

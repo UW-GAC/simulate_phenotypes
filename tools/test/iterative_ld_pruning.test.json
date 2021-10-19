@@ -1,0 +1,17 @@
+{
+    "gds_file": {
+        "class": "File",
+        "path": "/simphen/inst/extdata/1KG_phase3_chr1_SNVsubset.gds"
+    },
+    "strata_file": {
+        "class": "File",
+        "path": "/tools/test/1KG_strata_afr_eur.rds"
+    },
+    "variant_file": {
+        "class": "File",
+        "path": "/tools/test/1KG_variant_id.rds"
+    },
+    "maf": 0.01,
+    "ld_threshold": 0.5,
+    "out_prefix": "test"
+}
