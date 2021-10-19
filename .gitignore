@@ -2,6 +2,4 @@
 *.html
 *.Rcheck
 *.tar.gz
-*.RData
-*.rds
 *~
