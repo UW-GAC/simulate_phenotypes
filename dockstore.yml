@@ -1,0 +1,10 @@
+version: 1.2
+workflows:
+   - name: allele_freq
+     subclass: CWL
+     primaryDescriptorPath: /tools/allele_freq.cwl
+     authors:
+       - name: Stephanie Gogarten
+         orcid: 0000-0002-7231-9745
+         email: sdmorris@uw.edu
+	 
