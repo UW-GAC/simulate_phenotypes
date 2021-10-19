@@ -1,0 +1,10 @@
+{
+    "covmat_file": {
+        "class": "File",
+        "path": "/tools/test/1KG_covmat_blocks.RData"
+    },
+    "out_prefix": "test",
+    "varComp1": 3,
+    "varComp2": 7,
+    "num_outcomes": 10
+}

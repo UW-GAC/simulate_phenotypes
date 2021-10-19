@@ -6,3 +6,9 @@ workflows:
      primaryDescriptorPath: /tools/allele_freq.cwl
      testParameterFiles:
          - /tools/test/allele_freq.test.json
+   - name: simulate_correlated_outcomes
+     subclass: CWL
+     publish: true
+     primaryDescriptorPath: /tools/outcomes_in_parallel.cwl
+     testParameterFiles:
+         - /tools/test/outcomes_in_paralle.test.json
