@@ -4,7 +4,7 @@
         "path": "/tools/test/1KG_covmat_blocks.RData"
     },
     "out_prefix": "test",
-    "varComp1": 3,
-    "varComp2": 7,
+    "varComp1": 4,
+    "varComp2": 10,
     "num_outcomes": 10
 }

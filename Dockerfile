@@ -1,4 +1,4 @@
-FROM uwgac/topmed-master:2.12.0
+FROM uwgac/topmed-master:2.8.0
 
 USER root
 RUN cd /usr/local  && \
