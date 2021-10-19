@@ -1,0 +1,7 @@
+{
+    "gds_file": {
+        "class": "File",
+        "path": "/simphen/inst/extdata/1KG_phase3_chr1_SNVsubset.gds"
+    },
+    "out_prefix": "test"
+}

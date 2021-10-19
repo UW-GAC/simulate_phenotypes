@@ -57,12 +57,12 @@ outputs:
   type: File
   outputBinding:
     glob: '*.rds'
-stdout: job.out.log
 
 baseCommand:
 - Rscript
 - /usr/local/simulate_phenotypes/tools/allele_freq.R
 
+stdout: job.out.log
 hints:
 - class: sbg:SaveLogs
   value: job.out.log
