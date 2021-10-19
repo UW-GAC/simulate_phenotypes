@@ -4,13 +4,20 @@ label: Allele frequency
 doc: This tool calculates allele frequency for variants in a GDS file.
 $namespaces:
   sbg: https://sevenbridges.com
+  dct: http://purl.org/dc/terms/
+  foaf: http://xmlns.com/foaf/0.1/
+
+dct:creator:
+  "@id": "https://orcid.org/0000-0002-7231-9745"
+  foaf:name: Stephanie Gogarten
+  foaf:mbox: "mailto:sdmorris@uw.edu"
 
 requirements:
 - class: ShellCommandRequirement
 - class: ResourceRequirement
   coresMin: ${ return inputs.cpu }
 - class: DockerRequirement
-  dockerPull: uwgac/topmed-master:latest
+  dockerPull: uwgac/simphen:0.2.2
 - class: InlineJavascriptRequirement
 
 inputs:
@@ -60,11 +67,7 @@ outputs:
 stdout: job.out.log
 
 baseCommand:
-- wget
-- |-
-  https://raw.githubusercontent.com/UW-GAC/simulate_phenotypes/master/tools/allele_freq.R
-- '&&'
-- Rscript allele_freq.R
+- Rscript /usr/local/simulate_phenotypes/tools/allele_freq.R
 
 hints:
 - class: sbg:SaveLogs
