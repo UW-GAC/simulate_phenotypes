@@ -162,6 +162,8 @@ steps:
         label: output prefix
         doc: output prefix (will have ".rds" appended)
         type: string?
+        default: outcome_var_eff
+        sbg:toolDefaultValue: outcome_var_eff
         inputBinding:
           prefix: --out_file
           position: 9
