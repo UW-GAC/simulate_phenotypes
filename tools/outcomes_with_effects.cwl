@@ -30,11 +30,11 @@ inputs:
   sbg:fileTypes: RDS
 - id: h2
   label: heritability
-  doc: heritability (used if variant.id is a vector)
+  doc: SNP heritability attributed to the effect variant (used if variant.id is a vector)
   type: float?
 - id: beta
   label: beta
-  doc: beta (used if variant.id is a vector and h2 is not supplied)
+  doc: effect size attributed to the effect variant (used if variant.id is a vector and SNP heritability is not supplied)
   type: float?
 - id: varComp1
   label: genetic variance component
