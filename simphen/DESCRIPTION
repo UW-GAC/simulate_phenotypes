@@ -1,5 +1,5 @@
 Package: simphen
-Version: 0.2.2
+Version: 0.3.0
 Type: Package
 Title: Utilities for simulating phenotypes based on a covariance matrix
 Description: Utilities for simulating phenotypes based on a covariance matrix.
