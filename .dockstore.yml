@@ -24,3 +24,9 @@ workflows:
      primaryDescriptorPath: /tools/test_variant_effects.cwl
      testParameterFiles:
          - /tools/test/test_variant_effects.test.json
+   - name: simulate_outcomes_with_effects
+     subclass: CWL
+     publish: true
+     primaryDescriptorPath: /tools/outcomes_with_effects.cwl
+     testParameterFiles:
+         - /tools/test/outcomes_with_effects.test.json
