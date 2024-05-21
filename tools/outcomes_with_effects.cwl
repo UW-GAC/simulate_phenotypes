@@ -89,7 +89,7 @@ steps:
         coresMin: 0
         ramMin: 4000
       - class: DockerRequirement
-        dockerPull: uwgac/simphen:0.2.2-1
+        dockerPull: uwgac/simphen:0.3.0
       - class: InlineJavascriptRequirement
 
       inputs:
